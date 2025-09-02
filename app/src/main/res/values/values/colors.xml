@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:android="http://schemas.android.com/apk/res/android">
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="roxo">#7A40FF</color>
+    <color name="light_blue_50">#FFE1F5FE</color>
+    <color name="light_blue_200">#FF81D4FA</color>
+    <color name="light_blue_600">#FF039BE5</color>
+    <color name="light_blue_900">#FF01579B</color>
+    <color name="purple_500">#6200EE</color>
+    <color name="checkbox_tint">#B0BEC5</color> <!-- Cinza clarinho suave -->
+    <color name="teal_200">#FF03DAC5</color>
+    <color name="preto_escuro">#121212</color>
+    <color name="roxo_escuro">#361A73</color>
+    <color name="teal_700">#FF018786</color>
+
+
+</resources>

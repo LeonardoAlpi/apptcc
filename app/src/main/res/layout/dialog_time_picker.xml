@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:gravity="center_horizontal"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+
+    <TimePicker
+        android:id="@+id/timePicker"
+        android:layout_width="230dp"
+        android:layout_height="166dp"
+        android:layout_gravity="center"
+        android:timePickerMode="spinner" />
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="24dp"
+        android:gravity="center_horizontal">
+
+        <Button
+            android:id="@+id/btnCancelTime"
+            android:layout_width="105dp"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="16dp"
+            android:backgroundTint="#7A40FF"
+            android:paddingLeft="16dp"
+            android:paddingRight="16dp"
+            android:text="Cancelar"
+            android:textColor="@android:color/white" />
+
+        <Button
+            android:id="@+id/btnConfirmTime"
+            android:layout_width="105dp"
+            android:layout_height="wrap_content"
+            android:backgroundTint="#7A40FF"
+            android:paddingLeft="16dp"
+            android:paddingRight="16dp"
+            android:text="Confirmar"
+            android:textColor="@android:color/white" />
+    </LinearLayout>
+</LinearLayout>

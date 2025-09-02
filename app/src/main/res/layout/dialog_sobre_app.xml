@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:fillViewport="true"
+    android:overScrollMode="never">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/rounded_escuro"
+        android:orientation="vertical"
+        android:padding="24dp">
+
+        <TextView
+            android:id="@+id/titulo_sobre_app"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Sobre o Aplicativo"
+            android:textSize="20sp"
+            android:textColor="@color/white"
+            android:textStyle="bold"
+            android:layout_gravity="center_horizontal"
+            android:paddingBottom="16dp" />
+
+        <TextView
+            android:id="@+id/descricao_sobre_app"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Este aplicativo tem como objetivo ajudar os usuários a gerenciar hábitos saudáveis, treinos, progresso e bem-estar mental. Desenvolvido como parte de um projeto acadêmico, ele busca unir tecnologia com desenvolvimento pessoal de forma intuitiva."
+            android:textColor="@color/white"
+            android:textSize="16sp"
+            android:lineSpacingExtra="6dp"
+            android:paddingBottom="24dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="end">
+
+            <Button
+                android:id="@+id/btn_fechar_sobre"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Fechar" />
+        </LinearLayout>
+
+    </LinearLayout>
+</ScrollView>

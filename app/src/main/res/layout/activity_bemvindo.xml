@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:card_view="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#7D45F1"
+    android:padding="16dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center_horizontal">
+
+        <!-- Foto de perfil genérica -->
+
+        <!-- Saudação -->
+        <ImageView
+            android:id="@+id/imageViewProfile"
+            android:layout_width="100dp"
+            android:layout_height="100dp"
+            android:layout_marginTop="24dp"
+            android:padding="8dp"
+            android:scaleType="centerCrop"
+            android:src="@drawable/logo_app" />
+
+        <TextView
+            android:id="@+id/textView22"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Bem-vindo(a)!"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:textColor="#FFFFFF"
+            android:layout_marginTop="16dp" />
+
+        <!-- Card com informações -->
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            card_view:cardCornerRadius="24dp"
+            card_view:cardElevation="10dp"
+            card_view:cardBackgroundColor="#FFFFFF">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="24dp"
+                android:gravity="center_horizontal">
+
+                <!-- Idade -->
+                <TextView
+                    android:id="@+id/textView26idade"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Idade: -"
+                    android:textSize="18sp"
+                    android:drawableLeft="@android:drawable/ic_menu_my_calendar"
+                    android:drawablePadding="8dp"
+                    android:padding="8dp"
+                    android:textColor="#555" />
+
+                <!-- Altura -->
+                <TextView
+                    android:id="@+id/textView23altura"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Altura: -"
+                    android:textSize="18sp"
+                    android:drawableLeft="@android:drawable/ic_menu_compass"
+                    android:drawablePadding="8dp"
+                    android:padding="8dp"
+                    android:textColor="#555" />
+
+                <!-- Peso -->
+                <TextView
+                    android:id="@+id/textView24peso"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Peso: -"
+                    android:textSize="18sp"
+                    android:drawableLeft="@android:drawable/ic_menu_manage"
+                    android:drawablePadding="8dp"
+                    android:padding="8dp"
+                    android:textColor="#555" />
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- Botão de Logout -->
+        <Button
+            android:id="@+id/botaoLogout"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:layout_marginBottom="32dp"
+            android:backgroundTint="#FF6750A4"
+            android:text="Sair"
+            android:textColor="@android:color/white" />
+    </LinearLayout>
+</ScrollView>

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:padding="32dp"
+    tools:context=".FirebaseTestActivity">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Tela de Teste do Firebase"
+        android:textSize="22sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="32dp"/>
+
+    <Button
+        android:id="@+id/button_test_firebase_auth"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Testar Login Anônimo" />
+
+    <TextView
+        android:id="@+id/textView_firebase_result"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:text="Aguardando teste..."
+        android:textSize="16sp"
+        android:textAlignment="center"
+        tools:text="Resultado: Sucesso!" />
+
+</LinearLayout>

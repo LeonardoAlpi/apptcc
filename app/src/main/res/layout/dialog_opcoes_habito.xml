@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:background="@drawable/rounded_escuro">
+
+    <TextView
+        android:id="@+id/dialog_options_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Hábito"
+        android:textColor="@color/white"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:gravity="center"
+        android:paddingBottom="16dp" />
+
+    <Button
+        android:id="@+id/btn_ver_progresso"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Ver Progresso"
+        android:background="@drawable/rounded_button_white"
+        android:layout_marginBottom="8dp" />
+
+    <Button
+        android:id="@+id/btn_editar_habito"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Editar Hábito"
+        android:background="@drawable/rounded_button_white" />
+
+</LinearLayout>

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "902427096527",
+    "project_id": "ham-app-c6716",
+    "storage_bucket": "ham-app-c6716.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:902427096527:android:8eaf3b7d3d8083a8fc8eba",
+        "android_client_info": {
+          "package_name": "com.example.meuappfirebase"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDBMWsUBJW4ENJ_8muEWVzaDmSZ9TnyVY0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

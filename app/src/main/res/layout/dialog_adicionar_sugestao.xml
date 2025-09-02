@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:background="@drawable/rounded_escuro">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Adicionar/Remover Categorias"
+        android:textColor="@color/white"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginBottom="16dp"/>
+
+    <CheckBox
+        android:id="@+id/check_add_livros"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Sugestões de Livros"
+        android:textColor="@color/white"/>
+
+    <CheckBox
+        android:id="@+id/check_add_dietas"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Dicas de Dieta"
+        android:textColor="@color/white"/>
+
+    <CheckBox
+        android:id="@+id/check_add_meditacao"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Meditação"
+        android:textColor="@color/white"/>
+
+    <CheckBox
+        android:id="@+id/check_add_respiracao"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Respiração Guiada"
+        android:textColor="@color/white"/>
+
+    <CheckBox
+        android:id="@+id/check_add_podcasts"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Podcasts Relaxantes"
+        android:textColor="@color/white"/>
+
+    <CheckBox
+        android:id="@+id/check_add_exercicios"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Exercícios Mentais"
+        android:textColor="@color/white"/>
+
+    <Button
+        android:id="@+id/btn_confirmar_add_sugestao"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Confirmar"
+        android:layout_marginTop="24dp"/>
+
+</LinearLayout>

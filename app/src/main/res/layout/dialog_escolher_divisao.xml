@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:background="@drawable/rounded_escuro">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Como deseja organizar o treino?"
+        android:textColor="@color/white"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:gravity="center"
+        android:paddingBottom="16dp" />
+
+    <Button
+        android:id="@+id/btn_dias_da_semana"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Dias da Semana (Seg, Ter...)"
+        android:background="@drawable/rounded_button_white"
+        android:layout_marginBottom="8dp" />
+
+    <Button
+        android:id="@+id/btn_letras"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Letras (A, B, C...)"
+        android:background="@drawable/rounded_button_white"
+        android:layout_marginBottom="16dp" />
+
+    <Button
+        android:id="@+id/btn_cancelar_dialogo"
+        style="?android:attr/borderlessButtonStyle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Cancelar"
+        android:textColor="@android:color/white"
+        android:layout_gravity="center_horizontal"/>
+
+</LinearLayout>

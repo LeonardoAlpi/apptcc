@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true"
+    android:background="@drawable/chatgpt_image_22_de_abr__de_2025_14_02_10"
+    tools:context=".saudemental">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingVertical="32dp">
+
+        <!-- Card de hábitos -->
+        <LinearLayout
+            android:id="@+id/card_habitos"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@drawable/rounded_semi_transparent"
+            android:padding="16dp"
+            android:layout_marginTop="16dp"
+            android:layout_marginStart="32dp"
+            android:layout_marginEnd="32dp">
+
+            <TextView
+                android:id="@+id/textView18"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Quais hábitos ruins deseja controlar e mudar?"
+                android:textColor="@color/white"
+                android:textSize="16sp"
+                android:layout_marginBottom="8dp"/>
+
+            <CheckBox
+                android:id="@+id/checkBoxfumar"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Fumar"
+                android:textColor="@color/white" />
+
+            <CheckBox
+                android:id="@+id/checkBox2beber"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Beber"
+                android:textColor="@color/white" />
+
+            <CheckBox
+                android:id="@+id/checkBox3sonoruim"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Sono ruim"
+                android:textColor="@color/white" />
+
+            <CheckBox
+                android:id="@+id/checkBox4procastinacao"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Procrastinação"
+                android:textColor="@color/white" />
+
+            <CheckBox
+                android:id="@+id/checkBox5usoexcessivodocelular"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Uso excessivo do celular"
+                android:textColor="@color/white" />
+
+            <CheckBox
+                android:id="@+id/checkBoxNenhumHabito"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Nenhum dos hábitos acima"
+                android:textColor="@color/white" />
+        </LinearLayout>
+
+        <!-- Card de problemas emocionais -->
+        <LinearLayout
+            android:id="@+id/card_emocional"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@drawable/rounded_semi_transparent"
+            android:padding="16dp"
+            android:layout_marginTop="24dp"
+            android:layout_marginStart="32dp"
+            android:layout_marginEnd="32dp">
+
+            <TextView
+                android:id="@+id/textView21"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Enfrenta algum problema emocional?"
+                android:textColor="@color/white"
+                android:textSize="16sp"
+                android:layout_marginBottom="8dp"/>
+
+            <CheckBox
+                android:id="@+id/checkBox6ansiedade"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Ansiedade"
+                android:textColor="@color/white" />
+
+            <CheckBox
+                android:id="@+id/checkBox7depressao"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Depressão"
+                android:textColor="@color/white" />
+
+            <CheckBox
+                android:id="@+id/checkBox8estresse"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Estresse"
+                android:textColor="@color/white" />
+
+            <CheckBox
+                android:id="@+id/checkBox9faltademotivacao"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Falta de motivação"
+                android:textColor="@color/white" />
+
+            <CheckBox
+                android:id="@+id/checkBoxSemProblema"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Sem problema emocional aparente"
+                android:textColor="@color/white" />
+        </LinearLayout>
+
+        <!-- Botão Avançar -->
+        <Button
+            android:id="@+id/buttonavancarsaudemental"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Avançar"
+            android:padding="12dp"
+            android:layout_marginTop="32dp"
+            android:layout_marginStart="32dp"
+            android:layout_marginEnd="32dp"
+            android:layout_marginBottom="32dp"/>
+    </LinearLayout>
+</ScrollView>

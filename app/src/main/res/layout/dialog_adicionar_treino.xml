@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:background="@drawable/rounded_escuro">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Adicionar novo treino"
+        android:textColor="@color/white"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:gravity="center"
+        android:paddingBottom="16dp" />
+
+    <GridLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:columnCount="2"
+        android:rowCount="2">
+
+        <Button
+            android:id="@+id/btn_academia"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_columnWeight="1"
+            android:text="Academia"
+            android:background="@drawable/rounded_button_white"
+            android:layout_marginEnd="8dp"
+            android:layout_marginBottom="8dp" />
+
+        <Button
+            android:id="@+id/btn_corrida"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_columnWeight="1"
+            android:text="Corrida"
+            android:background="@drawable/rounded_button_white"
+            android:layout_marginBottom="8dp" />
+
+        <Button
+            android:id="@+id/btn_esportes"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_columnWeight="1"
+            android:text="Esportes"
+            android:background="@drawable/rounded_button_white"
+            android:layout_marginEnd="8dp" />
+
+        <Button
+            android:id="@+id/btn_personalizado"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_columnWeight="1"
+            android:text="Outro"
+            android:background="@drawable/rounded_button_white" />
+
+    </GridLayout>
+
+</LinearLayout>
