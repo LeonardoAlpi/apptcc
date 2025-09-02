@@ -2,57 +2,50 @@ package com.example.meuappfirebase
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.example.meuappfirebase.databinding.ActivityMainBinding
-import com.google.firebase.firestore.ktx.firestore
-import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
     private val viewModel: AuthViewModel by viewModels()
-    private val firestore = Firebase.firestore
+    private val TAG = "MainActivityDebug"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        verificarSessaoFirebase()
+        verificarSessaoAtiva()
         configurarBotoes()
         observarEstado()
     }
 
-    private fun verificarSessaoFirebase() {
-        val currentUser = viewModel.getCurrentUser()
-        if (currentUser != null && currentUser.isEmailVerified) {
-            // Usuário já logado, escondemos a tela de login
+    /**
+     * Verifica se já existe um usuário logado ao abrir o app.
+     */
+    private fun verificarSessaoAtiva() {
+        if (viewModel.getCurrentUser() != null && viewModel.getCurrentUser()!!.isEmailVerified) {
+            Log.d(TAG, "Sessão ativa encontrada. Iniciando sincronização...")
+            // Esconde a UI de login e mostra um carregamento
             binding.root.visibility = View.INVISIBLE
-
-            // Pegamos os dados do Firestore para decidir a tela
-            firestore.collection("usuarios").document(currentUser.uid).get()
-                .addOnSuccessListener { document ->
-                    val profileIsComplete = document != null &&
-                            document.exists() &&
-                            !document.getString("nome").isNullOrEmpty()
-                    navegarAposLogin(profileIsComplete)
-                }
-                .addOnFailureListener {
-                    // Em caso de falha, mostramos a tela de login
-                    binding.root.visibility = View.VISIBLE
-                }
-
+            // Se já há uma sessão, sincronizamos e então navegamos.
+            iniciarSincronizacaoENavegacao()
         } else {
-            // Nenhum usuário logado, mostramos a tela de login
+            Log.d(TAG, "Nenhuma sessão ativa. Exibindo tela de login.")
             binding.root.visibility = View.VISIBLE
         }
     }
 
+    /**
+     * Configura os cliques dos botões de login e registro.
+     */
     private fun configurarBotoes() {
         binding.buttonavancarinfousuario.setOnClickListener {
             val email = binding.editTextusuario.text.toString().trim()
@@ -63,40 +56,49 @@ class MainActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
 
-            viewModel.login(email, senha) { profileIsComplete ->
-                navegarAposLogin(profileIsComplete)
+            // 1. Tenta fazer o login
+            viewModel.login(email, senha) {
+                // 2. Se o login for bem-sucedido, inicia a sincronização
+                Log.d(TAG, "Login bem-sucedido. Iniciando sincronização...")
+                iniciarSincronizacaoENavegacao()
             }
         }
 
         binding.textView8.setOnClickListener {
             startActivity(Intent(this, RegistroActivity::class.java))
         }
-
         binding.textView5.setOnClickListener {
             Toast.makeText(this, "Tela de Recuperar Senha a ser implementada", Toast.LENGTH_SHORT).show()
         }
     }
 
+    /**
+     * // NOVO E ESSENCIAL
+     * Esta função centraliza a chamada de sincronização e garante que a navegação
+     * para o Roteador SÓ aconteça depois que a sincronização terminar.
+     */
+    private fun iniciarSincronizacaoENavegacao() {
+        viewModel.syncUserProfileOnLogin {
+            // Este código dentro do lambda só será executado QUANDO a sincronização terminar.
+            Log.d(TAG, "Sincronização completa. Navegando para o Roteador.")
+            val intent = Intent(this, RoteadorActivity::class.java)
+            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            startActivity(intent)
+            finish()
+        }
+    }
+
+    /**
+     * Observa o estado da UI para mostrar erros ou loading.
+     */
     private fun observarEstado() {
         lifecycleScope.launch {
             viewModel.uiState.collect { state ->
-                // Aqui você pode ligar/desligar um ProgressBar, se tiver
-                // binding.progressBar.visibility = if (state.isLoading) View.VISIBLE else View.GONE
-
+                binding.progressBar.visibility = if (state.isLoading) View.VISIBLE else View.GONE
                 state.error?.let {
                     Toast.makeText(this@MainActivity, it, Toast.LENGTH_LONG).show()
                 }
             }
         }
-    }
-
-    private fun navegarAposLogin(profileIsComplete: Boolean) {
-        val proximaTelaIntent = if (profileIsComplete) {
-            Intent(this, livro::class.java)
-        } else {
-            Intent(this, infousuario::class.java)
-        }
-        startActivity(proximaTelaIntent)
-        finish()
     }
 }

@@ -34,4 +34,8 @@ interface UserDao {
 
     @Query("SELECT * FROM weight_history WHERE userOwnerId = :userId ORDER BY date ASC")
     suspend fun getWeightHistory(userId: String): List<WeightEntry>
+
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertOrUpdateUser(user: User)
 }

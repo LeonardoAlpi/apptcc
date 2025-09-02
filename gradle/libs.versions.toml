@@ -18,6 +18,7 @@ junitVersion = "1.2.1"
 espressoCore = "3.6.1"
 googleGmsGoogleServices = "4.4.2"
 lifecycleLivedataKtx = "2.8.3"
+adapters = "3.2.0-alpha11"
 
 
 [libraries]
@@ -49,6 +50,7 @@ junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
 androidx-lifecycle-livedata-ktx = { group = "androidx.lifecycle", name = "lifecycle-livedata-ktx", version.ref = "lifecycleLivedataKtx" }
+androidx-adapters = { group = "androidx.databinding", name = "adapters", version.ref = "adapters" }
 
 # ...
 [plugins]

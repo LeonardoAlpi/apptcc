@@ -27,6 +27,12 @@
             </intent-filter>
         </activity>
 
+
+        <activity
+            android:name=".RoteadorActivity"
+            android:exported="false"
+            android:theme="@style/Theme.App.Transparent"/>
+
         <activity android:name=".RegistroActivity" android:exported="false" />
         <activity android:name=".VerificationActivity" android:exported="false" />
         <activity android:name=".RecuperarSenhaActivity" android:exported="false" />

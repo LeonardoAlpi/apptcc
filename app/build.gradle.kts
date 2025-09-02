@@ -61,6 +61,7 @@ dependencies {
     // --- Room ---
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
+    implementation(libs.androidx.adapters)
     kapt(libs.room.compiler)
 
     // --- Rede ---
