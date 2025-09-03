@@ -14,6 +14,7 @@ import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import com.example.meuappfirebase.databinding.ActivitySugestaoUserBinding
+import com.example.meuappfirebase.databinding.CardSugestaoBinding
 
 class SugestaoUser : AppCompatActivity() {
 
@@ -47,6 +48,8 @@ class SugestaoUser : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        // A Activity agora só precisa dar a ordem para o ViewModel carregar.
+        // O ViewModel se encarrega de buscar os dados da IA e do estado diário.
         viewModel.loadSuggestions()
     }
 
@@ -73,36 +76,35 @@ class SugestaoUser : AppCompatActivity() {
             cardView?.let {
                 it.visibility = if (state.isVisible) View.VISIBLE else View.GONE
                 if (state.isVisible) {
-                    val iconeView = it.findViewById<ImageView>(R.id.icone_sugestao)
-                    val tituloView = it.findViewById<TextView>(R.id.titulo_card_sugestao)
-                    val textoView = it.findViewById<TextView>(R.id.texto_sugestao)
-                    val btnConcluir = it.findViewById<ImageButton>(R.id.btn_concluir_sugestao)
-                    val btnProxima = it.findViewById<ImageButton>(R.id.btn_proxima_sugestao)
+                    // Aqui usamos o binding do card_sugestao.xml
+                    val cardBinding = CardSugestaoBinding.bind(it)
 
-                    iconeView.setImageResource(state.iconResId)
-                    tituloView.text = state.title
-                    textoView.text = state.suggestionTitle
+                    cardBinding.iconeSugestao.setImageResource(state.iconResId)
+                    cardBinding.tituloCardSugestao.text = state.title
+                    cardBinding.textoSugestao.text = state.suggestionTitle // O título principal da sugestão
 
                     if (state.isCompleted) {
                         it.alpha = 0.6f
-                        btnConcluir.visibility = View.GONE
-                        btnProxima.visibility = View.GONE
-                        textoView.setOnClickListener {
+                        cardBinding.btnConcluirSugestao.visibility = View.GONE
+                        cardBinding.btnProximaSugestao.visibility = View.GONE
+                        cardBinding.textoSugestao.setOnClickListener {
                             Toast.makeText(this, "Você já concluiu esta sugestão hoje!", Toast.LENGTH_SHORT).show()
                         }
                     } else {
                         it.alpha = 1.0f
-                        btnConcluir.visibility = View.VISIBLE
-                        btnProxima.visibility = View.VISIBLE
-                        textoView.setOnClickListener {
+                        cardBinding.btnConcluirSugestao.visibility = View.VISIBLE
+                        // O botão de próxima sugestão não faz mais sentido com a IA, vamos escondê-lo.
+                        cardBinding.btnProximaSugestao.visibility = View.GONE
+
+                        // Ao clicar no texto, mostra a descrição completa
+                        cardBinding.textoSugestao.setOnClickListener {
                             AlertDialog.Builder(this)
                                 .setTitle(state.suggestionTitle)
-                                .setMessage(state.suggestionDescription)
+                                .setMessage(state.suggestionDescription) // Mostra a descrição com os passos
                                 .setPositiveButton("OK", null)
                                 .show()
                         }
-                        btnConcluir.setOnClickListener { viewModel.markSuggestionAsDone(state.suggestionTitle) }
-                        btnProxima.setOnClickListener { viewModel.cycleToNextSuggestion(state.key) }
+                        cardBinding.btnConcluirSugestao.setOnClickListener { viewModel.markSuggestionAsDone(state.suggestionTitle) }
                     }
                 }
             }

@@ -7,16 +7,17 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import com.apol.myapplication.AppDatabase
-import com.example.meuappfirebase.R
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.FieldValue
+import com.google.firebase.firestore.SetOptions
 import com.google.firebase.firestore.ktx.firestore
+import com.google.firebase.firestore.ktx.toObjects
 import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
-// Data class para representar o estado de cada card na UI
+// Data class para representar o estado de cada card na UI (Sua classe, sem alterações)
 data class SuggestionCardState(
     val key: String,
     val isVisible: Boolean,
@@ -26,6 +27,15 @@ data class SuggestionCardState(
     val suggestionDescription: String,
     val isCompleted: Boolean
 )
+
+// Data class para receber os dados da IA do Firestore
+data class Sugestao(
+    val categoria: String = "",
+    val titulo: String = "",
+    val descricao: String = "",
+    val passos: List<String> = emptyList()
+)
+
 
 class SuggestionsViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -39,151 +49,135 @@ class SuggestionsViewModel(application: Application) : AndroidViewModel(applicat
     private val _statusMessage = MutableLiveData<Event<String>>()
     val statusMessage: LiveData<Event<String>> = _statusMessage
 
-    // BANCO DE DADOS DE SUGESTÕES, AGORA DENTRO DO VIEWMODEL
-    private val suggestionSources = mapOf(
-        "livros" to listOf(
-            "O Poder do Hábito" to "Por Charles Duhigg. Entenda como os hábitos funcionam e como mudá-los.",
-            "Mindset" to "Por Carol S. Dweck. A nova psicologia do sucesso.",
-            "Comece pelo Porquê" to "Por Simon Sinek. Como grandes líderes inspiram ação."
-        ).shuffled(),
-        "dietas" to listOf(
-            "Beba Mais Água" to "Mantenha-se hidratado ao longo do dia com água e chás sem açúcar.",
-            "Planeje suas Refeições" to "Dedique um tempo para planejar as refeições da semana.",
-            "Reduza os Ultraprocessados" to "Diminua o consumo de salgadinhos e refrigerantes."
-        ).shuffled(),
-        "meditacao" to listOf(
-            "5 Minutos de Atenção Plena" to "Sente-se em silêncio e foque apenas na sua respiração.",
-            "Escaneamento Corporal" to "Deite-se e leve sua atenção para cada parte do seu corpo, relaxando."
-        ).shuffled(),
-        "respiracao" to listOf(
-            "Técnica 4-7-8" to "Inspire por 4s, segure por 7s e expire por 8s. Repita 3 vezes.",
-            "Respiração Abdominal" to "Inspire sentindo sua barriga se expandir e expire lentamente."
-        ).shuffled(),
-        "podcasts" to listOf(
-            "Podcast: Autoconsciente" to "Uma jornada sobre autoconhecimento e psicologia.",
-            "Podcast: Estamos Bem?" to "Aborda o bem-estar de forma leve e acolhedora."
-        ).shuffled(),
-        "exercicios" to listOf(
-            "Diário de Gratidão" to "Antes de dormir, escreva três coisas pelas quais você foi grato(a) hoje.",
-            "Desafie seu Cérebro" to "Dedique 15 minutos a um quebra-cabeça, Sudoku ou palavras-cruzadas."
-        ).shuffled()
-    )
+    // REMOVIDO: O grande mapa `suggestionSources` não é mais necessário.
+    // A fonte de dados agora é 100% dinâmica e vem da IA via Firestore.
+
+    // MODIFICADO: Mapeamento de 'categoria' da IA para a configuração do seu card.
     private val cardConfig = mapOf(
-        "livros" to Triple(R.drawable.ic_book, "Livro do Mês", "livros"),
-        "dietas" to Triple(R.drawable.ic_food, "Dica de Dieta", "dietas"),
-        "meditacao" to Triple(R.drawable.ic_meditation, "Prática de Meditação", "meditacao"),
-        "respiracao" to Triple(R.drawable.ic_breathing, "Respiração Guiada", "respiracao"),
-        "podcasts" to Triple(R.drawable.ic_podcast, "Podcast Sugerido", "podcasts"),
-        "exercicios" to Triple(R.drawable.ic_brain, "Exercício Mental", "exercicios")
+        "LEITURA" to Triple("livros", R.drawable.ic_book, "Livro Sugerido"),
+        "DIETA" to Triple("dietas", R.drawable.ic_food, "Dica de Dieta"),
+        "MEDITACAO" to Triple("meditacao", R.drawable.ic_meditation, "Prática de Meditação"),
+        "RESPIRACAO" to Triple("respiracao", R.drawable.ic_breathing, "Respiração Guiada"),
+        "PODCASTS" to Triple("podcasts", R.drawable.ic_podcast, "Podcast Sugerido"),
+        // Usaremos a chave 'exercicios' para todas as sugestões de saúde mental
+        "SAUDE_MENTAL_ANSIEDADE" to Triple("exercicios", R.drawable.ic_brain, "Exercício Mental"),
+        "SAUDE_MENTAL_DEPRESSAO" to Triple("exercicios", R.drawable.ic_brain, "Exercício Mental"),
+        "SAUDE_MENTAL_ESTRESSE" to Triple("exercicios", R.drawable.ic_brain, "Exercício Mental"),
+        "SAUDE_MENTAL_MOTIVACAO" to Triple("exercicios", R.drawable.ic_brain, "Exercício Mental")
     )
 
+    /**
+     * MODIFICADO: Função principal que agora orquestra o carregamento de dados da IA
+     * e o estado de conclusão do dia.
+     */
     fun loadSuggestions() {
         val user = auth.currentUser ?: return
         val hoje = SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(Date())
 
         viewModelScope.launch {
             val userProfile = userDao.getUserById(user.uid)
-            val userInterests = userProfile?.sugestoesInteresse ?: listOf("Nenhuma atividade")
-            val dailyStateDocRef = firestore.collection("usuarios").document(user.uid)
-                .collection("estadoSugestoes").document(hoje)
+            val userInterests = userProfile?.sugestoesInteresse ?: emptyList()
 
-            dailyStateDocRef.get().addOnSuccessListener { document ->
-                if (document != null && document.exists()) {
-                    buildUiState(userInterests, document.data ?: emptyMap())
-                } else {
-                    calculateNewDayStateAndBuildUi(userInterests)
+            // 1. Busca as sugestões geradas pela IA
+            firestore.collection("usuarios").document(user.uid)
+                .collection("sugestoesIA").get()
+                .addOnSuccessListener { aiDocuments ->
+                    val sugestoesDaIA = aiDocuments.toObjects<Sugestao>()
+
+                    // 2. Busca o estado de conclusão de hoje
+                    firestore.collection("usuarios").document(user.uid)
+                        .collection("estadoSugestoes").document(hoje).get()
+                        .addOnSuccessListener { dailyStateDoc ->
+                            val concluidas = dailyStateDoc.get("concluidas") as? List<String> ?: emptyList()
+                            // 3. Constrói o estado da UI com os dois conjuntos de dados
+                            buildUiStateFromAI(sugestoesDaIA, userInterests, concluidas)
+                        }
+                }
+                .addOnFailureListener {
+                    _statusMessage.postValue(Event("Não foi possível carregar as sugestões da IA."))
+                }
+        }
+    }
+
+    /**
+     * NOVO: Constrói a lista de cards (UI State) a partir dos dados da IA e do estado diário.
+     */
+    private fun buildUiStateFromAI(
+        sugestoesIA: List<Sugestao>,
+        userInterests: List<String>,
+        concluidas: List<String>
+    ) {
+        val cards = sugestoesIA.mapNotNull { sugestao ->
+            val config = cardConfig[sugestao.categoria] ?: return@mapNotNull null
+
+            // O conteúdo principal do card agora combina descrição e passos
+            val descricaoCompleta = buildString {
+                append(sugestao.descricao)
+                if (sugestao.passos.isNotEmpty()) {
+                    append("\n\nPassos:\n")
+                    sugestao.passos.forEach { passo -> append("• $passo\n") }
                 }
             }
-        }
-    }
 
-    private fun calculateNewDayStateAndBuildUi(userInterests: List<String>) {
-        val user = auth.currentUser ?: return
-        val hoje = SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(Date())
-        val ontem = SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(Date(System.currentTimeMillis() - 86400000))
-
-        val yesterdayStateDocRef = firestore.collection("usuarios").document(user.uid)
-            .collection("estadoSugestoes").document(ontem)
-
-        yesterdayStateDocRef.get().addOnSuccessListener { yesterdayDoc ->
-            val yesterdayIndices = yesterdayDoc?.get("indices") as? Map<String, Long> ?: emptyMap()
-            val newIndices = mutableMapOf<String, Int>()
-            suggestionSources.keys.forEach { key ->
-                val lastIndex = yesterdayIndices[key]?.toInt() ?: -1
-                newIndices[key] = (lastIndex + 1) % (suggestionSources[key]?.size ?: 1)
+            // Verifica se a categoria está nos interesses do usuário
+            // (Isso usa a lógica do seu FAB de adicionar/remover sugestões)
+            val isVisible = userInterests.any { interest ->
+                config.third.contains(interest, ignoreCase = true) || interest.contains(config.first, ignoreCase = true)
             }
 
-            val newDailyState = mapOf(
-                "indices" to newIndices,
-                "concluidas" to emptyList<String>()
-            )
-
-            firestore.collection("usuarios").document(user.uid)
-                .collection("estadoSugestoes").document(hoje).set(newDailyState)
-
-            buildUiState(userInterests, newDailyState)
-        }
-    }
-
-    private fun buildUiState(userInterests: List<String>, dailyState: Map<String, Any>) {
-        val indices = dailyState["indices"] as? Map<String, Long> ?: emptyMap()
-        val concluidas = dailyState["concluidas"] as? List<String> ?: emptyList()
-
-        val cards = cardConfig.map { (key, config) ->
-            val sourceList = suggestionSources[key]!!
-            val currentIndex = indices[key]?.toInt() ?: 0
-            val currentSuggestion = sourceList.getOrNull(currentIndex) ?: ("Vazio" to "")
-
             SuggestionCardState(
-                key = key,
-                isVisible = userInterests.any { interest -> config.second.contains(interest, ignoreCase = true) || interest.contains(key, ignoreCase = true) },
-                iconResId = config.first,
-                title = config.second,
-                suggestionTitle = currentSuggestion.first,
-                suggestionDescription = currentSuggestion.second,
-                isCompleted = concluidas.contains(currentSuggestion.first)
+                key = config.first,
+                isVisible = isVisible,
+                iconResId = config.second,
+                title = config.third,
+                suggestionTitle = sugestao.titulo,
+                suggestionDescription = descricaoCompleta,
+                isCompleted = concluidas.contains(sugestao.titulo)
             )
         }
         _suggestionCards.postValue(cards)
     }
 
+    /**
+     * MANTIDO: Marca uma sugestão como concluída para o dia.
+     * A lógica é a mesma, mas agora usamos o título vindo da IA.
+     */
     fun markSuggestionAsDone(suggestionTitle: String) {
         val user = auth.currentUser ?: return
         val hoje = SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(Date())
         val docRef = firestore.collection("usuarios").document(user.uid)
             .collection("estadoSugestoes").document(hoje)
 
-        docRef.update("concluidas", FieldValue.arrayUnion(suggestionTitle))
-            .addOnSuccessListener { loadSuggestions() }
+        // Garante que o documento do dia exista antes de atualizá-lo
+        docRef.set(mapOf("lastUpdate" to FieldValue.serverTimestamp()), SetOptions.merge())
+            .addOnSuccessListener {
+                docRef.update("concluidas", FieldValue.arrayUnion(suggestionTitle))
+                    .addOnSuccessListener { loadSuggestions() } // Recarrega para atualizar a UI
+            }
     }
 
-    fun cycleToNextSuggestion(categoryKey: String) {
-        val user = auth.currentUser ?: return
-        val hoje = SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(Date())
-        val docRef = firestore.collection("usuarios").document(user.uid)
-            .collection("estadoSugestoes").document(hoje)
+    /**
+     * REMOVIDO: Esta função não é mais necessária, pois a IA fornece
+     * uma única sugestão por categoria, não uma lista para ciclar.
+     */
+    // fun cycleToNextSuggestion(categoryKey: String) { ... }
 
-        val sourceList = suggestionSources[categoryKey]!!
-        docRef.get().addOnSuccessListener { doc ->
-            val indices = (doc.get("indices") as? Map<String, Long> ?: emptyMap()).toMutableMap()
-            val currentIndex = indices[categoryKey]?.toInt() ?: 0
-            indices[categoryKey] = ((currentIndex + 1) % sourceList.size).toLong()
-            docRef.update("indices", indices).addOnSuccessListener { loadSuggestions() }
-        }
-    }
-
+    /**
+     * MANTIDO: Atualiza as preferências de visibilidade do usuário.
+     * Esta função do seu FAB continua 100% funcional.
+     */
     fun updateVisibleSuggestions(newInterests: List<String>) {
         val user = auth.currentUser ?: return
         viewModelScope.launch {
             val roomUser = userDao.getUserById(user.uid)
             roomUser?.let {
-                val updatedUser = it.copy(sugestoesInteresse = newInterests)
-                userDao.updateUser(updatedUser)
+                it.sugestoesInteresse = newInterests // Corrigido para atribuir a 'var'
+                userDao.updateUser(it)
             }
             firestore.collection("usuarios").document(user.uid).update("sugestoesInteresse", newInterests)
                 .addOnSuccessListener {
                     _statusMessage.postValue(Event("Preferências salvas!"))
-                    loadSuggestions()
+                    loadSuggestions() // Recarrega para aplicar a nova visibilidade
                 }
         }
     }
