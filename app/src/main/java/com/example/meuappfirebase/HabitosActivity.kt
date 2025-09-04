@@ -47,6 +47,7 @@ class HabitosActivity : AppCompatActivity() {
     override fun onBackPressed() {
         if (modoExclusaoAtivo) desativarModoExclusao()
         else super.onBackPressed()
+        finishAffinity()
     }
 
     private fun observarViewModel() {
@@ -73,17 +74,31 @@ class HabitosActivity : AppCompatActivity() {
         }
     }
 
+    // Dentro de HabitosActivity.kt
+
     private fun setupRecyclerView() {
         habitsAdapter = HabitsAdapter(
-            onItemClick = { habit -> if (modoExclusaoAtivo) toggleSelecao(habit) else mostrarOpcoesHabito(habit) },
-            onItemLongClick = { habit -> if (!modoExclusaoAtivo) ativarModoExclusao(habit) },
-            onMarkDone = { habit -> viewModel.marcarHabito(habit.id, true) },
-            onUndoDone = { habit -> viewModel.marcarHabito(habit.id, false) },
-            onToggleFavorite = { habit -> viewModel.toggleFavorito(habit) },
+            // CÓDIGO CORRIGIDO AQUI:
+            onItemClick = { habit ->
+                if (modoExclusaoAtivo) toggleSelecao(habit) else mostrarOpcoesHabito(habit)
+            },
+            onItemLongClick = { habit ->
+                if (!modoExclusaoAtivo) ativarModoExclusao(habit)
+            },
+            onMarkDone = { habit ->
+                viewModel.marcarHabito(habit.id, true)
+            },
+            onUndoDone = { habit ->
+                viewModel.marcarHabito(habit.id, false)
+            },
+            onToggleFavorite = { habit ->
+                viewModel.toggleFavorito(habit)
+            },
             emojiExtractor = this::extrairEmoji,
             emojiRemover = this::removerEmoji,
             textDrawableFactory = this::TextDrawable
         )
+
         binding.recyclerViewHabits.adapter = habitsAdapter
         binding.recyclerViewHabits.layoutManager = LinearLayoutManager(this)
     }

@@ -3,32 +3,35 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    android:id="@+id/main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/roxo"
+    android:background="@color/roxo_fundo"
     tools:context=".ActivityProgressoHabito">
 
     <ImageView
         android:id="@+id/btn_back"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
         android:src="@drawable/ic_arrow_back"
         app:tint="@color/white"
-        android:padding="16dp"
+        android:padding="12dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginStart="8dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
     <TextView
         android:id="@+id/title_progresso"
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        tools:text="Academia"
+        tools:text="🏋️ Academia"
         android:textColor="@color/white"
-        android:textSize="20sp"
+        android:textSize="22sp"
         android:textStyle="bold"
-        app:layout_constraintTop_toTopOf="@id/btn_back"
-        app:layout_constraintBottom_toBottomOf="@id/btn_back"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        app:layout_constraintTop_toBottomOf="@id/btn_back"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
@@ -37,148 +40,151 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:layout_marginTop="16dp"
+        android:layout_marginTop="24dp"
         android:layout_marginStart="16dp"
         android:layout_marginEnd="16dp"
-        app:layout_constraintTop_toBottomOf="@id/btn_back"
+        app:layout_constraintTop_toBottomOf="@id/title_progresso"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         android:baselineAligned="false">
 
-        <LinearLayout
+        <com.google.android.material.card.MaterialCardView
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:orientation="vertical"
-            android:background="@drawable/bg_stat_card"
-            android:padding="16dp"
-            android:gravity="center_vertical"
-            android:layout_marginEnd="8dp">
-
+            android:layout_marginEnd="8dp"
+            app:cardBackgroundColor="@color/roxo_card"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="0dp">
             <LinearLayout
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical">
-                <ImageView
-                    android:layout_width="16dp"
-                    android:layout_height="16dp"
-                    android:src="@drawable/ic_flame"
-                    app:tint="@color/white"/>
+                android:orientation="vertical"
+                android:padding="16dp">
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Sequência Atual"
+                    android:text="🔥 Sequência Atual"
                     android:textColor="#E5E5EA"
-                    android:layout_marginStart="8dp"
-                    android:textSize="14sp"
-                    android:minLines="2"
-                    android:maxLines="2"
-                    android:gravity="bottom"/>
+                    android:textSize="14sp"/>
+                <TextView
+                    android:id="@+id/tv_dias_seguidos"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    tools:text="12 dias"
+                    android:textColor="@color/white"
+                    android:textSize="24sp"
+                    android:textStyle="bold"
+                    android:layout_marginTop="4dp"/>
             </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
 
-            <TextView
-                android:id="@+id/tv_dias_seguidos"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                tools:text="12 dias"
-                android:textColor="@color/white"
-                android:textSize="22sp"
-                android:textStyle="bold"
-                android:layout_marginTop="4dp"/>
-        </LinearLayout>
-
-        <LinearLayout
+        <com.google.android.material.card.MaterialCardView
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:orientation="vertical"
-            android:background="@drawable/bg_stat_card"
-            android:padding="16dp"
-            android:gravity="center_vertical"
-            android:layout_marginStart="8dp">
-
+            android:layout_marginStart="8dp"
+            app:cardBackgroundColor="@color/roxo_card"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="0dp">
             <LinearLayout
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical">
-                <ImageView
-                    android:layout_width="16dp"
-                    android:layout_height="16dp"
-                    android:src="@drawable/ic_target"
-                    app:tint="@color/white"/>
+                android:orientation="vertical"
+                android:padding="16dp">
                 <TextView
                     android:id="@+id/tv_constancia_label"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Constância (Mês)"
+                    android:text="🎯 Constância (Mês)"
                     android:textColor="#E5E5EA"
-                    android:layout_marginStart="8dp"
-                    android:textSize="14sp"
-                    android:minLines="2"
-                    android:maxLines="2"
-                    android:gravity="bottom"/>
+                    android:textSize="14sp"/>
+                <TextView
+                    android:id="@+id/tv_constancia_geral"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    tools:text="85%"
+                    android:textColor="@color/white"
+                    android:textSize="24sp"
+                    android:textStyle="bold"
+                    android:layout_marginTop="4dp"/>
             </LinearLayout>
-
-            <TextView
-                android:id="@+id/tv_constancia_geral"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                tools:text="85%"
-                android:textColor="@color/white"
-                android:textSize="22sp"
-                android:textStyle="bold"
-                android:layout_marginTop="4dp"/>
-        </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
     </LinearLayout>
 
-    <com.example.meuappfirebase.SimpleLineChart
-        android:id="@+id/simpleLineChart"
+
+    <com.google.android.material.card.MaterialCardView
         android:layout_width="0dp"
         android:layout_height="0dp"
-        android:layout_marginTop="24dp"
-        android:layout_marginBottom="16dp"
+        android:layout_marginTop="16dp"
         android:layout_marginStart="16dp"
         android:layout_marginEnd="16dp"
-        app:layout_constraintTop_toBottomOf="@id/dashboard_stats"
-        app:layout_constraintBottom_toTopOf="@id/chip_group_filters"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
-
-    <com.google.android.material.chip.ChipGroup
-        android:id="@+id/chip_group_filters"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
         android:layout_marginBottom="24dp"
-        app:singleSelection="true"
-        app:chipSpacingHorizontal="8dp"
-        app:layout_constraintBottom_toBottomOf="parent"
+        app:cardBackgroundColor="@color/roxo_card"
+        app:cardCornerRadius="12dp"
+        app:cardElevation="0dp"
+        app:layout_constraintTop_toBottomOf="@id/dashboard_stats"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent">
 
-        <com.google.android.material.chip.Chip
-            android:id="@+id/chip_semana"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Semana"
-            style="@style/CustomChipChoice"/>
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:padding="16dp">
 
-        <com.google.android.material.chip.Chip
-            android:id="@+id/chip_mes"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Mês"
-            android:checked="true"
-            style="@style/CustomChipChoice"/>
+            <TextView
+                android:id="@+id/chart_title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Histórico de Progresso"
+                android:textColor="@color/white"
+                android:textStyle="bold"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"/>
 
-        <com.google.android.material.chip.Chip
-            android:id="@+id/chip_ano"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Ano"
-            style="@style/CustomChipChoice"/>
+            <com.google.android.material.chip.ChipGroup
+                android:id="@+id/chip_group_filters"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:singleSelection="true"
+                app:chipSpacingHorizontal="8dp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toTopOf="@id/simpleLineChart">
 
-    </com.google.android.material.chip.ChipGroup>
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chip_semana"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Semana"
+                    style="@style/CustomChipChoice"/>
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chip_mes"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Mês"
+                    android:checked="true"
+                    style="@style/CustomChipChoice"/>
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chip_ano"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Ano"
+                    style="@style/CustomChipChoice"/>
+            </com.google.android.material.chip.ChipGroup>
+
+            <com.example.meuappfirebase.SimpleLineChart
+                android:id="@+id/simpleLineChart"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:layout_marginTop="16dp"
+                app:layout_constraintTop_toBottomOf="@id/chart_title"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+    </com.google.android.material.card.MaterialCardView>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

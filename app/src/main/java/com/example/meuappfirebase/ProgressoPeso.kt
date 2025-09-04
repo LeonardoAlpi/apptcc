@@ -27,11 +27,7 @@ class ProgressoPeso : AppCompatActivity() {
         observarViewModel()
     }
 
-    override fun onResume(){
-        super.onResume()
-        // Pede ao ViewModel para carregar os dados sempre que a tela é exibida
-        viewModel.loadData()
-    }
+
 
     private fun observarViewModel() {
         // Observa o perfil do usuário para mostrar na tela
@@ -81,14 +77,10 @@ class ProgressoPeso : AppCompatActivity() {
     }
 
     private fun updateChartData(history: List<WeightEntry>) {
-        if (history.isEmpty()) {
-            binding.weightChart.setData(emptyList(), emptyList())
-            return
-        }
-        val points = history.map { it.weight.toInt() }
-        val labels = history.map {
-            SimpleDateFormat("dd/MM", Locale.getDefault()).format(Date(it.date))
-        }
+        val points = history.map { it.weight.toFloat() } // <-- CORRIGIDO para Float
+        val labels = history.map { SimpleDateFormat("dd/MM", Locale.getDefault()).format(Date(it.date)) }
+
+        // O gráfico agora recebe a lista de Float, como esperado
         binding.weightChart.setData(points, labels)
     }
 

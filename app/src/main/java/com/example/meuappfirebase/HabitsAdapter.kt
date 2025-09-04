@@ -102,7 +102,9 @@ class HabitsAdapter(
             }
 
             btnFavorite.setImageResource(
-                if (habit.isFavorited) R.drawable.ic_star_filled else R.drawable.ic_star_outline
+                // Se está favoritado, usa 'ic_star_outline' (que é a sua estrela CHEIA)
+                // Se NÃO está favoritado, usa 'ic_star_filled' (que é a sua estrela VAZIA)
+                if (habit.isFavorited) R.drawable.ic_star_outline else R.drawable.ic_star_filled
             )
 
             val background = if (habit.isSelected) R.drawable.bg_selected_item else R.drawable.rounded_semi_transparent

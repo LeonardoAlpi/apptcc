@@ -14,5 +14,19 @@
     <color name="roxo_escuro">#361A73</color>
     <color name="teal_700">#FF018786</color>
 
+    <color name="purple_200">#FFBB86FC</color>
+
+    <color name="purple_700">#FF3700B3</color>
+
+    <color name="roxo_fundo">#1F103A</color>
+
+    <color name="roxo_card">#3A2469</color>
+
+    <color name="roxo_principal">#5D3B8B</color>
+
+    <color name="roxo_claro">#9D78C9</color>
+
+    <color name="texto_secundario">#B0A8C0</color>
+
 
 </resources>

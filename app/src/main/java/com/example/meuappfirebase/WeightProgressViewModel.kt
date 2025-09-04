@@ -33,6 +33,11 @@ class WeightProgressViewModel(application: Application) : AndroidViewModel(appli
     private val _operationStatus = MutableLiveData<Event<String>>()
     val operationStatus: LiveData<Event<String>> = _operationStatus
 
+    init {
+        // Os dados serão carregados apenas uma vez quando o ViewModel for criado.
+        loadData()
+    }
+
     fun loadData() {
         val user = auth.currentUser ?: return
         viewModelScope.launch {

@@ -11,7 +11,7 @@ class SimpleLineChart @JvmOverloads constructor(
     context: Context, attrs: AttributeSet? = null
 ) : View(context, attrs) {
 
-    private var dataPoints: List<Int> = emptyList()
+    private var dataPoints: List<Float> = emptyList()
     private var labels: List<String> = emptyList()
     private var animatedFraction: Float = 0f
 
@@ -41,7 +41,7 @@ class SimpleLineChart @JvmOverloads constructor(
      * Esta é a função que está causando o erro.
      * Garantimos aqui que ela espera uma lista de Inteiros (List<Int>).
      */
-    fun setData(points: List<Int>, newLabels: List<String>) {
+    fun setData(points: List<Float>, newLabels: List<String>) {
         dataPoints = points
         labels = newLabels
         startAnimation()
@@ -71,7 +71,7 @@ class SimpleLineChart @JvmOverloads constructor(
         val paddingBottom = 80f
         val chartWidth = width - paddingLeft - paddingRight
         val chartHeight = height - paddingTop - paddingBottom
-        val maxVal = (dataPoints.maxOrNull() ?: 1).coerceAtLeast(1)
+        val maxVal = (dataPoints.maxOrNull() ?: 1f).coerceAtLeast(1f)
 
         val gridLines = 4
         for (i in 0..gridLines) {

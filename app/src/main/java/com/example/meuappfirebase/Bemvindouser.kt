@@ -12,6 +12,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.isVisible
 import com.apol.myapplication.data.model.Bloco
 import com.apol.myapplication.data.model.Habito
 import com.bumptech.glide.Glide
@@ -44,6 +45,7 @@ class Bemvindouser : AppCompatActivity() {
     override fun onBackPressed() {
         finishAffinity()
     }
+
 
     private fun observarViewModel() {
         viewModel.userProfile.observe(this) { user ->
@@ -81,6 +83,10 @@ class Bemvindouser : AppCompatActivity() {
 
     private fun atualizarWidgetHabitos(habitosFavoritados: List<Habito>) {
         val widgetHabitos = binding.widgetHabitos.root
+        val emptyStateTextView = widgetHabitos.findViewById<TextView>(R.id.tv_empty_habits_widget)
+
+        emptyStateTextView.isVisible = habitosFavoritados.isEmpty()
+
         val slots = listOf(
             Triple(widgetHabitos.findViewById<View>(R.id.habito_slot_1), widgetHabitos.findViewById<ImageView>(R.id.habito_icon_1), widgetHabitos.findViewById<TextView>(R.id.habito_text_1)),
             Triple(widgetHabitos.findViewById<View>(R.id.habito_slot_2), widgetHabitos.findViewById<ImageView>(R.id.habito_icon_2), widgetHabitos.findViewById<TextView>(R.id.habito_text_2)),
@@ -90,19 +96,33 @@ class Bemvindouser : AppCompatActivity() {
         for (i in slots.indices) {
             val (slotView, iconView, textView) = slots[i]
             val habito = habitosFavoritados.getOrNull(i)
+
             if (habito != null) {
-                slotView.visibility = View.VISIBLE
-                val nomeCompleto = habito.nome
-                val emoji = extrairEmoji(nomeCompleto)
-                textView.text = removerEmoji(nomeCompleto)
+                slotView.isVisible = true
+
+                // --- MUDANÇA PARA SEPARAR ID E NOME ---
+                val partes = habito.nome.split(";;;")
+                val habitId = partes[0]
+                val habitName = if (partes.size > 1) partes[1] else ""
+
+                val emoji = extrairEmoji(habitName)
+                textView.text = removerEmoji(habitName)
+
                 if (emoji.isNotEmpty()) {
                     iconView.setImageDrawable(TextDrawable(this, emoji))
                 } else {
                     iconView.setImageResource(R.drawable.ic_habits)
                 }
-                slotView.setOnClickListener { viewModel.markHabitAsDone(habito) }
+
+                // --- MUDANÇA PRINCIPAL NO CLIQUE ---
+                slotView.setOnClickListener {
+                    val intent = Intent(this, ActivityProgressoHabito::class.java)
+                    // Agora envia a CHAVE e o TIPO corretos que a tela de progresso espera
+                    intent.putExtra("habit_id_string", habitId)
+                    startActivity(intent)
+                }
             } else {
-                slotView.visibility = View.GONE
+                slotView.isVisible = false
             }
         }
     }

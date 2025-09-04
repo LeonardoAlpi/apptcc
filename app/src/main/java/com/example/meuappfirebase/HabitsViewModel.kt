@@ -111,14 +111,24 @@ class HabitosViewModel : ViewModel() {
     }
 
     fun toggleFavorito(habit: HabitUI) {
+        // Verifica se já atingiu o limite de 3 favoritos
         if (!habit.isFavorited) {
             val totalFavoritos = allHabitsCache.count { it.isFavorited }
             if (totalFavoritos >= 3) {
-                _operationStatus.value = "Você pode favoritar no máximo 3 hábitos." // ALTERADO
-                return
+                _operationStatus.value = "Você pode favoritar no máximo 3 hábitos."
+                return // Para a execução aqui
             }
         }
-        firestore.collection("habitos").document(habit.id).update("isFavorito", !habit.isFavorited)
+
+        // Se não atingiu o limite, ou se está desfavoritando,
+        // ele manda o comando para o Firestore.
+        firestore.collection("habitos").document(habit.id)
+            .update("isFavorito", !habit.isFavorited) // A mágica está aqui!
+            .addOnFailureListener { e ->
+                // Se der erro, avisa no Logcat. É bom ficar de olho aqui!
+                Log.e("HabitosViewModel", "Erro ao favoritar hábito", e)
+                _operationStatus.value = "Erro ao favoritar o hábito."
+            }
     }
 
     fun executarExclusao(habitosParaApagar: List<HabitUI>) {
