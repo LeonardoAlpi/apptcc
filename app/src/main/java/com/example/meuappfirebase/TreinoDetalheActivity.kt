@@ -124,6 +124,7 @@ class TreinoDetalheActivity : AppCompatActivity() {
     private fun exibirDialogoEscolhaDeDivisao(treino: TreinoEntity) {
         val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_escolher_divisao, null)
         val dialog = AlertDialog.Builder(this).setView(dialogView).create()
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
         dialog.setCancelable(false)
 
         val clickListener = View.OnClickListener { view ->
@@ -142,6 +143,9 @@ class TreinoDetalheActivity : AppCompatActivity() {
             if (viewModel.workout.value?.tipoDivisao == TipoDivisao.NAO_DEFINIDO) {
                 finish()
             }
+        }
+        dialogView.findViewById<TextView>(R.id.btn_cancelar).setOnClickListener {
+            dialog.dismiss() // Apenas fecha o diálogo
         }
         dialog.show()
     }

@@ -156,9 +156,10 @@ class CronometroActivity : AppCompatActivity() {
     private fun updateTimerDisplay() {
         val hours = TimeUnit.MILLISECONDS.toHours(timeLeftInMillis)
         val minutes = TimeUnit.MILLISECONDS.toMinutes(timeLeftInMillis) - TimeUnit.HOURS.toMinutes(hours)
-        val seconds = TimeUnit.MILLISECONDS.toSeconds(timeLeftInMillis) - TimeUnit.MINUTES.toSeconds(TimeUnit.MILLISECONDS.toMinutes(timerDuration))
+        val seconds = TimeUnit.MILLISECONDS.toSeconds(timeLeftInMillis) - TimeUnit.MINUTES.toSeconds(TimeUnit.MILLISECONDS.toMinutes(timeLeftInMillis))
 
-        val timeString = if (timerDuration >= 3600000L) {
+        val timeString = if (hours > 0) {
+            // Só mostra as horas se o tempo restante for maior que 1 hora
             String.format(Locale.getDefault(), "%d:%02d:%02d", hours, minutes, seconds)
         } else {
             String.format(Locale.getDefault(), "%02d:%02d", minutes, seconds)

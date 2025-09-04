@@ -33,13 +33,17 @@
         android:background="@drawable/rounded_button_white"
         android:layout_marginBottom="16dp" />
 
-    <Button
-        android:id="@+id/btn_cancelar_dialogo"
-        style="?android:attr/borderlessButtonStyle"
+    <TextView
+        android:id="@+id/btn_cancelar"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Cancelar"
+        android:text="CANCELAR"
         android:textColor="@android:color/white"
-        android:layout_gravity="center_horizontal"/>
+        android:textStyle="bold"
+        android:layout_marginTop="16dp"
+        android:padding="8dp"
+        android:layout_gravity="center_horizontal"
+        android:background="?attr/selectableItemBackground" />
+
 
 </LinearLayout>
