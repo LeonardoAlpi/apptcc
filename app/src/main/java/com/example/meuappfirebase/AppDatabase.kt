@@ -21,7 +21,7 @@ import com.apol.myapplication.Converters // <- nosso conversor único
         Bloco::class,
         HabitoAgendamento::class
     ],
-    version = 14,
+    version = 15,
     exportSchema = false
 )
 @TypeConverters(Converters::class) // <- garante que Room use nosso conversor

@@ -6,8 +6,6 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.os.Build
-import android.provider.Settings
-import android.widget.Toast
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -18,6 +16,7 @@ import com.apol.myapplication.data.model.Bloco
 import com.apol.myapplication.data.model.Note
 import com.apol.myapplication.data.model.TipoLembrete
 import com.google.firebase.auth.ktx.auth
+import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
@@ -26,6 +25,7 @@ import java.util.*
 class NotesViewModel(application: Application) : AndroidViewModel(application) {
 
     private val auth = Firebase.auth
+    private val firestore = Firebase.firestore // << NOVO: Referência correta para o Firestore
     private val notesDao = AppDatabase.getDatabase(application).notesDao()
     private val alarmManager = application.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
@@ -70,14 +70,25 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
     fun addBloco(nome: String) {
         val user = auth.currentUser ?: return
         viewModelScope.launch {
-            notesDao.insertBloco(Bloco(userOwnerId = user.uid, nome = nome))
+            val novoBloco = Bloco(userOwnerId = user.uid, nome = nome)
+            // Insere no Room
+            notesDao.insertBloco(novoBloco)
+            // Sincroniza com o Firestore
+            firestore.collection("users").document(user.uid).collection("blocos")
+                .document(novoBloco.id).set(novoBloco)
         }
     }
 
     fun updateBloco(bloco: Bloco) {
+        val user = auth.currentUser ?: return
         viewModelScope.launch {
+            // Atualiza no Room
             notesDao.updateBloco(bloco)
-            // A lógica de alarme agora é controlada pelo ViewModel
+            // Sincroniza com o Firestore
+            firestore.collection("users").document(user.uid).collection("blocos")
+                .document(bloco.id).set(bloco)
+
+            // Lógica de alarme
             cancelarLembretesParaBloco(bloco)
             if (bloco.tipoLembrete != TipoLembrete.NENHUM) {
                 agendarLembretesParaBloco(bloco)
@@ -85,19 +96,61 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun deleteBlocos(blocos: List<Bloco>) = viewModelScope.launch {
-        blocos.forEach { cancelarLembretesParaBloco(it) } // Cancela alarmes antes de deletar
-        notesDao.deleteBlocos(blocos)
+    fun deleteBlocos(blocos: List<Bloco>) {
+        val user = auth.currentUser ?: return
+        viewModelScope.launch {
+            blocos.forEach { bloco ->
+                cancelarLembretesParaBloco(bloco)
+                // Deleta do Firestore
+                firestore.collection("users").document(user.uid).collection("blocos")
+                    .document(bloco.id).delete()
+            }
+            // Deleta do Room
+            notesDao.deleteBlocos(blocos)
+        }
+    }
+
+    // --- FUNÇÃO DE FAVORITAR CORRIGIDA ---
+
+    fun toggleFavoritoBloco(bloco: Bloco) {
+        val userId = auth.currentUser?.uid ?: run {
+            _statusMessage.value = Event("Ação não permitida. Usuário não encontrado.")
+            return
+        }
+
+        val blocosAtuais = _blocos.value ?: return
+        val favoritosAtuais = blocosAtuais.count { it.isFavorito }
+
+        if (!bloco.isFavorito && favoritosAtuais >= 3) {
+            _statusMessage.value = Event("Você só pode favoritar até 3 blocos.")
+            return
+        }
+
+        val blocoAtualizado = bloco.copy(isFavorito = !bloco.isFavorito)
+
+        viewModelScope.launch {
+            // 1. Atualiza o Room para feedback instantâneo na UI
+            notesDao.updateBloco(blocoAtualizado)
+
+            // 2. Sincroniza a mudança com o Firestore
+            firestore.collection("users").document(userId).collection("blocos")
+                .document(bloco.id)
+                .update("favorito", blocoAtualizado.isFavorito) // Verifique se o nome do campo é "favorito" no seu Firestore
+                .addOnFailureListener {
+                    _statusMessage.value = Event("Erro ao sincronizar favorito.")
+                    // Opcional: reverter a mudança no Room em caso de falha
+                    viewModelScope.launch { notesDao.updateBloco(bloco) }
+                }
+        }
     }
 
 
-    // --- LÓGICA DE ALARME E NOTIFICAÇÃO (MOVIDA DA ACTIVITY) ---
+    // --- LÓGICA DE ALARME E NOTIFICAÇÃO ---
 
     private fun agendarLembretesParaBloco(bloco: Bloco) {
         val context = getApplication<Application>().applicationContext
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !alarmManager.canScheduleExactAlarms()) {
             _statusMessage.postValue(Event("Permissão para agendar alarmes é necessária."))
-            // A Activity tratará de abrir as configurações
             return
         }
         var requestCodeCounter = 0
@@ -141,18 +194,25 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
         val context = getApplication<Application>().applicationContext
         for (i in 0 until 100) { // Um número arbitrário para garantir que todos os p.i. sejam cancelados
             val requestCode = bloco.id.hashCode() + i
-            val pendingIntent = getPendingIntent(context, bloco, requestCode)
+            val pendingIntent = getPendingIntent(context, bloco, requestCode, cancel = true)
             alarmManager.cancel(pendingIntent)
         }
     }
 
-    private fun getPendingIntent(context: Context, bloco: Bloco, requestCode: Int): PendingIntent {
+    private fun getPendingIntent(context: Context, bloco: Bloco, requestCode: Int, cancel: Boolean = false): PendingIntent {
         val intent = Intent(context, BlocoNotificationReceiver::class.java).apply {
-            putExtra("titulo", bloco.nome + if (bloco.subtitulo.isNotEmpty()) " - ${bloco.subtitulo}" else "")
-            putExtra("mensagem", bloco.mensagemNotificacao.ifEmpty { "Você tem um lembrete para este bloco." })
-            putExtra("bloco_id", bloco.id)
+            if (!cancel) {
+                putExtra("titulo", bloco.nome + if (bloco.subtitulo.isNotEmpty()) " - ${bloco.subtitulo}" else "")
+                putExtra("mensagem", bloco.mensagemNotificacao.ifEmpty { "Você tem um lembrete para este bloco." })
+                putExtra("bloco_id", bloco.id)
+            }
         }
-        return PendingIntent.getBroadcast(context, requestCode, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        } else {
+            PendingIntent.FLAG_UPDATE_CURRENT
+        }
+        return PendingIntent.getBroadcast(context, requestCode, intent, flags)
     }
 
     private fun parseHorario(horarioStr: String): Pair<Int, Int>? {

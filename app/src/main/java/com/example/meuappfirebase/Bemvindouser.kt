@@ -127,33 +127,40 @@ class Bemvindouser : AppCompatActivity() {
         }
     }
 
-    private fun atualizarWidgetBlocos(blocos: List<Bloco>) {
+    private fun atualizarWidgetBlocos(blocosFavoritados: List<Bloco>) {
         val widgetBlocos = binding.widgetBlocos.root
-        val blocosViews = listOf(
-            widgetBlocos.findViewById<LinearLayout>(R.id.bloco_nota_1),
-            widgetBlocos.findViewById<LinearLayout>(R.id.bloco_nota_2),
-            widgetBlocos.findViewById<LinearLayout>(R.id.bloco_nota_3)
-        )
-        val blocosTexts = listOf(
-            widgetBlocos.findViewById<TextView>(R.id.bloco_text_1),
-            widgetBlocos.findViewById<TextView>(R.id.bloco_text_2),
-            widgetBlocos.findViewById<TextView>(R.id.bloco_text_3)
+        val emptyStateTextView = widgetBlocos.findViewById<TextView>(R.id.tv_empty_blocos_widget)
+
+        emptyStateTextView.isVisible = blocosFavoritados.isEmpty()
+
+        // Lista dos slots do widget
+        val slots = listOf(
+            Triple(widgetBlocos.findViewById<View>(R.id.bloco_slot_1), widgetBlocos.findViewById<ImageView>(R.id.bloco_icon_1), widgetBlocos.findViewById<TextView>(R.id.bloco_text_1)),
+            Triple(widgetBlocos.findViewById<View>(R.id.bloco_slot_2), widgetBlocos.findViewById<ImageView>(R.id.bloco_icon_2), widgetBlocos.findViewById<TextView>(R.id.bloco_text_2)),
+            Triple(widgetBlocos.findViewById<View>(R.id.bloco_slot_3), widgetBlocos.findViewById<ImageView>(R.id.bloco_icon_3), widgetBlocos.findViewById<TextView>(R.id.bloco_text_3))
         )
 
-        for (i in blocosViews.indices) {
-            val blocoData = blocos.getOrNull(i)
-            if (blocoData != null) {
-                blocosTexts[i].text = blocoData.nome
-                blocosViews[i].setOnClickListener {
+        for (i in slots.indices) {
+            val (slotView, iconView, textView) = slots[i]
+            val bloco = blocosFavoritados.getOrNull(i)
+
+            if (bloco != null) {
+                slotView.isVisible = true
+                textView.text = bloco.nome
+
+                // Aqui você pode definir um ícone específico se quiser, ou um padrão
+                iconView.setImageResource(R.drawable.ic_block)
+
+                slotView.setOnClickListener {
                     val intent = Intent(this, anotacoes::class.java).apply {
+                        // Abre a tela de anotações já no modo blocos e pode até abrir o bloco específico
                         putExtra("modo_blocos_ativo", true)
-                        putExtra("abrir_bloco_id", blocoData.id)
+                        putExtra("abrir_bloco_id", bloco.id)
                     }
                     startActivity(intent)
                 }
-                blocosViews[i].visibility = View.VISIBLE
             } else {
-                blocosViews[i].visibility = View.GONE
+                slotView.isVisible = false
             }
         }
     }

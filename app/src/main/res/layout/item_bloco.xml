@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/item_bloco_container"
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="horizontal"
@@ -8,33 +10,37 @@
     android:background="@drawable/rounded_semi_transparent"
     android:gravity="center_vertical"
     android:layout_marginVertical="4dp"
-    android:clickable="true"
-    android:focusable="true"
     android:layout_marginStart="32dp"
     android:layout_marginEnd="32dp">
 
-    <CheckBox
-        android:id="@+id/note_checkbox"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:visibility="gone"
-        android:layout_alignParentEnd="true"
-        android:layout_centerVertical="true" />
-
     <ImageView
-        android:id="@+id/icon_block"
-        android:layout_width="24dp"
-        android:layout_height="24dp"
-        android:src="@drawable/ic_block"
-        android:contentDescription="Ícone do bloco"
-        android:tint="#FFFFFF"
-        android:layout_marginEnd="12dp" />
+        android:id="@+id/icone_bloco"
+        android:layout_width="28dp"
+        android:layout_height="28dp"
+        android:layout_marginEnd="12dp"
+        app:tint="@android:color/white"
+        android:contentDescription="Ícone do Bloco"
+        tools:src="@drawable/ic_block" />
 
     <TextView
-        android:id="@+id/texto_bloco"
+        android:id="@+id/bloco_texto_completo"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:textColor="#FFFFFF"
+        android:layout_weight="1"
+        android:textColor="@android:color/white"
         android:textSize="16sp"
-        android:layout_weight="1" />
+        android:textStyle="bold"
+        android:maxLines="2"
+        android:ellipsize="end"
+        tools:text="Estudos - TI" />
+
+    <ImageButton
+        android:id="@+id/btn_favorite_bloco"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:src="@drawable/ic_star_outline"
+        app:tint="#FFD700"
+        android:contentDescription="Favoritar Bloco" />
+
 </LinearLayout>

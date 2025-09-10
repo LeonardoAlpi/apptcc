@@ -7,12 +7,12 @@ import com.apol.myapplication.Converters
 import kotlinx.serialization.Serializable
 
 @Entity(tableName = "blocos")
-@Serializable
+
 @TypeConverters(Converters::class) // <- Adiciona aqui para que o Room use os conversores
 data class Bloco(
     @PrimaryKey
     val id: String = java.util.UUID.randomUUID().toString(),
-
+    var isFavorito: Boolean = false,
     val userOwnerId: String,
 
     var nome: String,
@@ -26,4 +26,10 @@ data class Bloco(
 
     var segundosLembrete: Long? = null,
     var isSelected: Boolean = false
-)
+){
+    // Adicione um construtor vazio para o Firebase
+    constructor() : this(
+        userOwnerId = "", // Valor padrão
+        nome = ""         // Valor padrão
+    )
+}

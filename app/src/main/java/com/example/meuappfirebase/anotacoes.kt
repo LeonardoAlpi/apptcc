@@ -63,6 +63,10 @@ class anotacoes : AppCompatActivity() {
     }
 
     private fun observarViewModel() {
+        viewModel.blocos.observe(this) { listaDeBlocos ->
+            // O ListAdapter é inteligente. Ele só vai redesenhar os itens que mudaram.
+            blocosAdapter.submitList(listaDeBlocos)
+        }
         viewModel.notes.observe(this) { notes -> notesAdapter.submitList(notes) }
         viewModel.blocos.observe(this) { blocos -> blocosAdapter.submitList(blocos) }
         viewModel.statusMessage.observe(this) { event ->
@@ -82,7 +86,8 @@ class anotacoes : AppCompatActivity() {
         )
         blocosAdapter = BlocosAdapter(
             onItemClick = { bloco -> if (modoExclusaoBlocosAtivo) toggleBlocoSelection(bloco) else abrirDialogEditarBloco(bloco) },
-            onItemLongClick = { bloco -> if (!modoExclusaoBlocosAtivo) ativarModoExclusaoBlocos(); toggleBlocoSelection(bloco) }
+            onItemLongClick = { bloco -> if (!modoExclusaoBlocosAtivo) ativarModoExclusaoBlocos(); toggleBlocoSelection(bloco) },
+            onFavoriteClick = { bloco -> viewModel.toggleFavoritoBloco(bloco) } // <<-- CONECTADO AQUI
         )
         binding.recyclerViewNotes.layoutManager = LinearLayoutManager(this)
     }
