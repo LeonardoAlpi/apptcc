@@ -8,7 +8,7 @@ plugins {
 
 android {
     namespace = "com.example.meuappfirebase"
-    compileSdk = 34 // Usando a SDK 34 que é a padrão estável atual
+    compileSdk = 34
 
     defaultConfig {
         applicationId = "com.example.meuappfirebase"
@@ -17,6 +17,9 @@ android {
         versionCode = 1
         versionName = "1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // se precisar por causa de muitas dependências
+        multiDexEnabled = true
     }
 
     buildTypes {
@@ -28,17 +31,23 @@ android {
             )
         }
     }
+
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
+        // manter Java 11 se você for usar libs que pedem J11 (ok se não usar google-cloud SDK)
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
     }
     kotlinOptions {
-        jvmTarget = "1.8"
+        jvmTarget = "11"
     }
-    // Habilita o ViewBinding, que é essencial para o seu projeto.
-    // O buildFeatures do Compose foi removido.
+
     buildFeatures {
         viewBinding = true
+    }
+
+    packaging {
+        pickFirst("META-INF/DEPENDENCIES")
+        pickFirst("META-INF/INDEX.LIST")
     }
 }
 
@@ -48,10 +57,10 @@ dependencies {
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
     implementation(libs.androidx.constraintlayout)
-    implementation(libs.androidx.lifecycle.viewmodel.ktx) // Para o by viewModels()
-    implementation(libs.androidx.activity.ktx) // Para o by viewModels()
+    implementation(libs.androidx.lifecycle.viewmodel.ktx)
+    implementation(libs.androidx.activity.ktx)
 
-    // --- Firebase ---
+    // --- Firebase (BOM garante compatibilidade entre as libs Firebase) ---
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.auth.ktx)
     implementation(libs.firebase.firestore.ktx)
@@ -78,4 +87,13 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     implementation(libs.androidx.lifecycle.livedata.ktx)
+
+    // --- Multidex (se multiDexEnabled = true) ---
+    implementation(libs.androidx.multidex)
+
+    // --- OBS: removidas dependências google-cloud-vertexai e grpc-okhttp (não usar no Android) ---
+    // implementation("com.google.cloud:google-cloud-vertexai:0.1.0")
+    // implementation("io.grpc:grpc-okhttp:1.60.1")
+
+    // **Importante**: NÃO forçar exclusões globais de protobuf aqui — deixe o BOM/Gradle resolver as versões compatíveis.
 }
