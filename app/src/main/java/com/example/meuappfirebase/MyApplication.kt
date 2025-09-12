@@ -1,9 +1,11 @@
 package com.example.meuappfirebase // Pacote corrigido
 
 import android.app.Application
+import com.apol.myapplication.HabitAlarmScheduler
 import com.google.firebase.FirebaseApp
 import com.google.firebase.appcheck.FirebaseAppCheck
 import com.google.firebase.appcheck.debug.DebugAppCheckProviderFactory
+
 
 /**
  * A classe Application é o primeiro componente a ser instanciado quando seu app é iniciado.
@@ -18,6 +20,7 @@ class MyApplication : Application() {
         // Inicializa o Firebase explicitamente. Embora muitas vezes seja automático,
         // é uma boa prática garantir que ele seja o primeiro a iniciar.
         FirebaseApp.initializeApp(this)
+        //HabitAlarmScheduler.scheduleDailyReminder(this)
 
         // Mantemos a inicialização do App Check para desenvolvimento.
         // Isso ajuda a proteger seus recursos do Firebase (como o Firestore) contra abuso,

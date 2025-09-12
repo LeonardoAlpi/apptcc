@@ -1,20 +1,27 @@
 package com.example.meuappfirebase
 
+import android.Manifest // << IMPORTE NECESSÁRIO
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager // << IMPORTE NECESSÁRIO
 import android.graphics.*
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
+import android.os.Build // << IMPORTE NECESSÁRIO
 import android.os.Bundle
+import android.provider.Settings
 import android.view.LayoutInflater
 import android.view.View
 import android.widget.*
+import androidx.activity.result.contract.ActivityResultContracts // << IMPORTE NECESSÁRIO
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat // << IMPORTE NECESSÁRIO
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.meuappfirebase.databinding.ActivityHabitosBinding
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
@@ -24,9 +31,20 @@ class HabitosActivity : AppCompatActivity() {
     private lateinit var binding: ActivityHabitosBinding
     private val viewModel: HabitosViewModel by viewModels()
     private lateinit var habitsAdapter: HabitsAdapter
-    // A variável 'mostrandoHabitosBons' foi REMOVIDA. O ViewModel é a única fonte da verdade.
-    private val allDays = setOf("SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT")
     private var modoExclusaoAtivo = false
+
+    private val allDays = setOf("SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT")
+
+    // --- NOVO: Lançador para pedir permissão de notificação ---
+    private val requestPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        if (isGranted) {
+            Toast.makeText(this, "Permissão concedida! Lembretes ativados.", Toast.LENGTH_SHORT).show()
+        } else {
+            Toast.makeText(this, "Permissão negada. Os lembretes de hábitos não funcionarão.", Toast.LENGTH_LONG).show()
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -37,17 +55,24 @@ class HabitosActivity : AppCompatActivity() {
         setupListeners()
         configurarNavBar()
         observarViewModel()
+
+        // --- NOVAS CHAMADAS ---
+        pedirPermissaoDeNotificacao()
+        viewModel.tryToScheduleHabitReminders()
     }
 
-    override fun onResume() {
-        super.onResume()
-        if (modoExclusaoAtivo) desativarModoExclusao()
-    }
-
-    override fun onBackPressed() {
-        if (modoExclusaoAtivo) desativarModoExclusao()
-        else super.onBackPressed()
-        finishAffinity()
+    // --- NOVA FUNÇÃO PARA PEDIR A PERMISSÃO ---
+    private fun pedirPermissaoDeNotificacao() {
+        // Só é necessário para Android 13 (API 33) ou superior
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(
+                    this,
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) != PackageManager.PERMISSION_GRANTED) {
+                // Se a permissão não foi concedida, lança o pop-up
+                requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
     }
 
     private fun observarViewModel() {
@@ -56,6 +81,7 @@ class HabitosActivity : AppCompatActivity() {
                 habitsAdapter.submitList(listaHabitos)
             }
         }
+        // ... (o resto da sua função observarViewModel continua igual)
         lifecycleScope.launch {
             viewModel.mostrandoHabitosBons.collect { isBons ->
                 binding.habitsTitle.text = if (isBons) "Seus Hábitos Bons" else "Seus Hábitos Ruins"
@@ -63,18 +89,26 @@ class HabitosActivity : AppCompatActivity() {
         }
         lifecycleScope.launch {
             viewModel.operationStatus.collect { message ->
-                // Se a mensagem não for nula...
                 message?.let {
-                    // ...mostra o Toast...
                     Toast.makeText(this@HabitosActivity, it, Toast.LENGTH_SHORT).show()
-                    // ...e imediatamente avisa o ViewModel para limpar a mensagem.
                     viewModel.clearOperationStatus()
                 }
             }
         }
+        lifecycleScope.launch {
+            viewModel.permissionEvent.collectLatest {
+                abrirTelaDePermissaoDeAlarme()
+            }
+        }
     }
 
-    // Dentro de HabitosActivity.kt
+    private fun abrirTelaDePermissaoDeAlarme() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM)
+            startActivity(intent)
+            Toast.makeText(this, "Por favor, ative a permissão de alarmes para os lembretes.", Toast.LENGTH_LONG).show()
+        }
+    }
 
     private fun setupRecyclerView() {
         habitsAdapter = HabitsAdapter(

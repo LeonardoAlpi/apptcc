@@ -1,6 +1,11 @@
 package com.example.meuappfirebase
 
+import android.app.AlarmManager
+import android.app.Application
+import android.content.Context
+import android.os.Build
 import android.util.Log
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.ktx.auth
@@ -10,12 +15,22 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.text.SimpleDateFormat
 import java.util.*
+import com.apol.myapplication.AppDatabase
+import com.apol.myapplication.HabitAlarmScheduler
+import com.apol.myapplication.data.model.Habito
+import com.apol.myapplication.data.model.HabitoProgresso
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.launch
 
-class HabitosViewModel : ViewModel() {
+class HabitosViewModel(application: Application) : AndroidViewModel(application) {
 
     private val firestore = Firebase.firestore
     private val auth = Firebase.auth
     private val usuarioLogadoId = auth.currentUser?.uid
+
+    // Adicionamos a referência ao DAO para poder salvar no Room
+    private val habitoDao = AppDatabase.getDatabase(application).habitoDao()
 
     private val _habitsList = MutableStateFlow<List<HabitUI>>(emptyList())
     val habitsList = _habitsList.asStateFlow()
@@ -23,15 +38,35 @@ class HabitosViewModel : ViewModel() {
     private val _mostrandoHabitosBons = MutableStateFlow(true)
     val mostrandoHabitosBons = _mostrandoHabitosBons.asStateFlow()
 
-    // ALTERADO: Agora é uma String anulável, em vez de um Evento.
     private val _operationStatus = MutableStateFlow<String?>(null)
     val operationStatus = _operationStatus.asStateFlow()
 
     private var allHabitsCache = listOf<HabitUI>()
+    private val _permissionEvent = MutableSharedFlow<Unit>()
+    val permissionEvent = _permissionEvent.asSharedFlow()
+    private val alarmManager = application.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
     init {
         carregarHabitosEmTempoReal()
     }
+
+    fun tryToScheduleHabitReminders() {
+        viewModelScope.launch {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                if (alarmManager.canScheduleExactAlarms()) {
+                    // Permissão OK, pode agendar
+                    HabitAlarmScheduler.scheduleDailyReminder(getApplication())
+                } else {
+                    // Permissão faltando, avisa a Activity
+                    _permissionEvent.emit(Unit)
+                }
+            } else {
+                // Versões antigas do Android não precisam dessa permissão
+                HabitAlarmScheduler.scheduleDailyReminder(getApplication())
+            }
+        }
+    }
+
 
     private fun carregarHabitosEmTempoReal() {
         if (usuarioLogadoId == null) {
@@ -44,7 +79,7 @@ class HabitosViewModel : ViewModel() {
             .addSnapshotListener { snapshots, error ->
                 if (error != null) {
                     Log.w("HabitosViewModel", "Erro ao ouvir as mudanças nos hábitos.", error)
-                    _operationStatus.value = "Erro ao carregar hábitos." // ALTERADO
+                    _operationStatus.value = "Erro ao carregar hábitos."
                     return@addSnapshotListener
                 }
 
@@ -60,13 +95,6 @@ class HabitosViewModel : ViewModel() {
         _habitsList.value = allHabitsCache.filter { it.isGoodHabit == _mostrandoHabitosBons.value }
     }
 
-    fun setTipoHabito(isBons: Boolean) {
-        if (_mostrandoHabitosBons.value != isBons) {
-            _mostrandoHabitosBons.value = isBons
-            filtrarHabitos()
-        }
-    }
-
     fun toggleTipoHabito() {
         _mostrandoHabitosBons.value = !_mostrandoHabitosBons.value
         filtrarHabitos()
@@ -75,29 +103,40 @@ class HabitosViewModel : ViewModel() {
     fun adicionarHabito(nome: String, diasProgramados: Set<String>, isGoodHabit: Boolean) {
         if (usuarioLogadoId == null) return
 
-        val novoHabito = hashMapOf(
-            "userOwnerId" to usuarioLogadoId,
-            "nome" to nome,
-            "isFavorito" to false,
-            "isGoodHabit" to isGoodHabit,
-            "diasProgramados" to diasProgramados.toList(),
+        val novoHabitoFirestore = hashMapOf(
+            "userOwnerId" to usuarioLogadoId, "nome" to nome, "isFavorito" to false,
+            "isGoodHabit" to isGoodHabit, "diasProgramados" to diasProgramados.toList(),
             "progresso" to emptyList<String>()
         )
-        firestore.collection("habitos").add(novoHabito)
-            .addOnSuccessListener { _operationStatus.value = "Hábito '$nome' criado!" } // ALTERADO
+
+        firestore.collection("habitos").add(novoHabitoFirestore)
+            .addOnSuccessListener { documentReference ->
+                val firestoreId = documentReference.id
+                viewModelScope.launch {
+                    val novoHabitoRoom = Habito(
+                        firestoreId = firestoreId,
+                        userOwnerId = usuarioLogadoId,
+                        nome = nome,
+                        isGoodHabit = isGoodHabit
+                    )
+                    habitoDao.insertHabito(novoHabitoRoom)
+                    _operationStatus.value = "Hábito '$nome' criado!"
+                }
+            }
             .addOnFailureListener { e ->
                 Log.e("HabitosViewModel", "Erro ao adicionar hábito", e)
-                _operationStatus.value = "Erro ao criar hábito." // ALTERADO
+                _operationStatus.value = "Erro ao criar hábito."
             }
     }
 
-    fun marcarHabito(habitId: String, concluir: Boolean) {
-        val docRef = firestore.collection("habitos").document(habitId)
+    // FUNÇÃO SIMPLIFICADA E CORRIGIDA
+    fun marcarHabito(habitIdFirestore: String, concluir: Boolean) {
+        val docRef = firestore.collection("habitos").document(habitIdFirestore)
+        val hoje = getHojeString()
+
         firestore.runTransaction { transaction ->
             val snapshot = transaction.get(docRef)
             val progresso = snapshot.get("progresso") as? MutableList<String> ?: mutableListOf()
-            val hoje = getHojeString()
-
             if (concluir) {
                 if (!progresso.contains(hoje)) progresso.add(hoje)
             } else {
@@ -105,8 +144,20 @@ class HabitosViewModel : ViewModel() {
             }
             transaction.update(docRef, "progresso", progresso)
         }.addOnFailureListener { e ->
-            Log.e("HabitosViewModel", "Erro ao marcar hábito", e)
-            _operationStatus.value = "Não foi possível atualizar o hábito." // ALTERADO
+            Log.e("HabitosViewModel", "Erro ao marcar hábito no Firestore", e)
+        }
+
+        viewModelScope.launch {
+            val habitoRoom = habitoDao.getHabitoByFirestoreId(habitIdFirestore)
+            if (habitoRoom != null) {
+                if (concluir) {
+                    habitoDao.insertProgresso(HabitoProgresso(habitoId = habitoRoom.id, data = hoje))
+                } else {
+                    habitoDao.deleteProgresso(habitoId = habitoRoom.id, data = hoje)
+                }
+            } else {
+                Log.w("HabitosViewModel", "Não foi possível encontrar o hábito no Room para o firestoreId: $habitIdFirestore")
+            }
         }
     }
 
@@ -167,7 +218,7 @@ class HabitosViewModel : ViewModel() {
         val calendar = Calendar.getInstance()
         val sdf = SimpleDateFormat("yyyyMMdd", Locale.getDefault())
         if (!datasConcluidas.contains(sdf.format(calendar.time))) {
-            return 0
+            calendar.add(Calendar.DAY_OF_YEAR, -1)
         }
         while (datasConcluidas.contains(sdf.format(calendar.time))) {
             sequencia++
@@ -176,7 +227,7 @@ class HabitosViewModel : ViewModel() {
         return sequencia
     }
 
-    private fun com.google.firebase.firestore.DocumentSnapshot.toHabitUI(): HabitUI? {
+        private fun com.google.firebase.firestore.DocumentSnapshot.toHabitUI(): HabitUI? {
         return try {
             val nome = getString("nome") ?: return null
             val progresso = get("progresso") as? List<String> ?: emptyList()

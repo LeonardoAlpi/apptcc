@@ -49,4 +49,10 @@ interface HabitoDao {
 
     @Query("SELECT * FROM habito_agendamentos WHERE habitoId = :habitoId ORDER BY dataDeInicio DESC")
     suspend fun getAgendamentosParaHabito(habitoId: Long): List<HabitoAgendamento>
+
+    @Query("SELECT habitoId FROM habito_progresso WHERE data = :data")
+    suspend fun getCompletedHabitIdsForDate(data: String): List<Long>
+
+    @Query("SELECT * FROM habitos WHERE firestoreId = :firestoreId LIMIT 1")
+    suspend fun getHabitoByFirestoreId(firestoreId: String): Habito?
 }

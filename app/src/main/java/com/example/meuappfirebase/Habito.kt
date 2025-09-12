@@ -11,6 +11,7 @@ data class Habito(
     var id: Long = 0,
 
     // 1. ADICIONADO VALORES PADRÃO A TODOS OS CAMPOS
+    var firestoreId: String = "",
     var userOwnerId: String = "",
     var nome: String = "",
     var isFavorito: Boolean = false,
