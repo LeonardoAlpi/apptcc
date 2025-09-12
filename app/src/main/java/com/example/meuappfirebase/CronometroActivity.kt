@@ -15,6 +15,7 @@ import androidx.appcompat.app.AppCompatActivity
 import com.example.meuappfirebase.databinding.ActivityCronometroBinding
 import java.util.*
 import java.util.concurrent.TimeUnit
+import android.media.RingtoneManager
 
 class CronometroActivity : AppCompatActivity() {
 
@@ -42,13 +43,25 @@ class CronometroActivity : AppCompatActivity() {
 
         // Configura a barra de navegação.
         configurarNavBar()
+
+
     }
 
     override fun onBackPressed() {
         // Mantém sua lógica de fechar o app ao pressionar voltar nesta tela.
         finishAffinity()
     }
-
+    private fun tocarSomDeAlarme() {
+        try {
+            // Pega o som de notificação padrão do sistema
+            val somDeNotificacao = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+            val r = RingtoneManager.getRingtone(applicationContext, somDeNotificacao)
+            // Toca o som
+            r.play()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
     private fun setupListeners() {
         binding.tvTimer.setOnClickListener {
             if (!isTimerRunning) {
@@ -131,6 +144,7 @@ class CronometroActivity : AppCompatActivity() {
                 updateProgressBar(true)
                 updateUI()
                 Toast.makeText(this@CronometroActivity, "Tempo finalizado!", Toast.LENGTH_SHORT).show()
+                tocarSomDeAlarme()
             }
         }.start()
 
