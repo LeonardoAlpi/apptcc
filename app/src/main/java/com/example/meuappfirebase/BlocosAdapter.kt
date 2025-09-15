@@ -3,45 +3,47 @@ package com.apol.myapplication // Mantendo seu pacote original
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageButton
+import android.widget.ImageView
 import android.widget.TextView
 import androidx.core.content.ContextCompat
+import androidx.recyclerview.widget.DiffUtil
+import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.apol.myapplication.data.model.Bloco
 import com.example.meuappfirebase.R
 
 class BlocosAdapter(
     private val onItemClick: (Bloco) -> Unit,
-    private val onItemLongClick: (Bloco) -> Unit
-) : RecyclerView.Adapter<BlocosAdapter.BlocoViewHolder>() {
+    private val onItemLongClick: (Bloco) -> Unit,
+    private val onFavoriteClick: (Bloco) -> Unit
+) : ListAdapter<Bloco, BlocosAdapter.BlocoViewHolder>(BlocoDiffCallback()) {
 
-    private var blocos: MutableList<Bloco> = mutableListOf()
-    var modoExclusaoAtivo: Boolean = false
+    // Estas propriedades controlam o estado de seleção da UI
+    private var modoExclusaoAtivo: Boolean = false
+    private val itensSelecionados = mutableSetOf<String>()
 
-    fun submitList(novaLista: List<Bloco>) {
-        blocos.clear()
-        blocos.addAll(novaLista)
-        notifyDataSetChanged()
+    fun getSelecionados(): List<Bloco> {
+        return currentList.filter { itensSelecionados.contains(it.id) }
     }
 
     fun limparSelecao() {
-        blocos.forEach { it.isSelected = false }
         modoExclusaoAtivo = false
-        notifyDataSetChanged()
+        itensSelecionados.clear()
+        notifyDataSetChanged() // Necessário para redesenhar todos os itens
     }
 
-    fun getSelecionados(): List<Bloco> = blocos.filter { it.isSelected }
+    fun ativarModoExclusao() {
+        modoExclusaoAtivo = true
+    }
 
-    // --- FUNÇÃO ADICIONADA AQUI ---
-    /**
-     * Alterna o estado de seleção de um bloco específico.
-     * @param bloco O bloco que teve seu estado de seleção alterado.
-     */
     fun toggleSelection(bloco: Bloco) {
-        val blocoNaLista = blocos.find { it.id == bloco.id }
-        blocoNaLista?.let {
-            it.isSelected = !it.isSelected
-            notifyItemChanged(blocos.indexOf(it))
+        if (itensSelecionados.contains(bloco.id)) {
+            itensSelecionados.remove(bloco.id)
+        } else {
+            itensSelecionados.add(bloco.id)
         }
+        notifyItemChanged(currentList.indexOf(bloco))
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): BlocoViewHolder {
@@ -50,39 +52,60 @@ class BlocosAdapter(
     }
 
     override fun onBindViewHolder(holder: BlocoViewHolder, position: Int) {
-        holder.bind(blocos[position])
+        val bloco = getItem(position)
+        holder.bind(bloco)
     }
 
-    override fun getItemCount(): Int = blocos.size
-
     inner class BlocoViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-        private val texto = itemView.findViewById<TextView>(R.id.texto_bloco)
-        private val container = itemView.findViewById<View>(R.id.item_bloco_container)
+        // IDs corretos do novo item_bloco.xml
+        private val iconeBloco: ImageView = itemView.findViewById(R.id.icone_bloco)
+        private val textoCompleto: TextView = itemView.findViewById(R.id.bloco_texto_completo) // << MUDOU
+        private val favoriteButton: ImageButton = itemView.findViewById(R.id.btn_favorite_bloco)
 
         fun bind(bloco: Bloco) {
-            texto.text = if (bloco.subtitulo.isNotEmpty()) {
+            // 1. ADICIONA O ÍCONE
+            // Substitua 'ic_block' pelo ícone que desejar
+            iconeBloco.setImageResource(R.drawable.ic_block)
+
+            // 2. JUNTA NOME E COMPLEMENTO (SUBTÍTULO)
+            val textoFinal = if (bloco.subtitulo.isNotEmpty()) {
                 "${bloco.nome} - ${bloco.subtitulo}"
             } else {
                 bloco.nome
             }
+            textoCompleto.text = textoFinal
 
-            val background = if (bloco.isSelected) R.drawable.bg_selected_item else R.drawable.rounded_semi_transparent
-            container.background = ContextCompat.getDrawable(itemView.context, background)
+            // O resto da sua lógica de bind continua igual...
+            val favoriteIconRes = if (bloco.isFavorito) R.drawable.ic_star_outline else R.drawable.ic_star_filled
+            favoriteButton.setImageResource(favoriteIconRes)
 
+            val isSelected = itensSelecionados.contains(bloco.id)
+            val backgroundRes = if (isSelected) R.drawable.bg_selected_item else R.drawable.rounded_semi_transparent
+            itemView.background = ContextCompat.getDrawable(itemView.context, backgroundRes)
+
+            favoriteButton.setOnClickListener { onFavoriteClick(bloco) }
             itemView.setOnClickListener {
-                if (modoExclusaoAtivo) {
-                    toggleSelection(bloco) // Chama a função interna da classe
-                } else {
-                    onItemClick(bloco)
-                }
+                if (modoExclusaoAtivo) toggleSelection(bloco) else onItemClick(bloco)
             }
-
             itemView.setOnLongClickListener {
-                if (!modoExclusaoAtivo) {
-                    onItemLongClick(bloco)
-                }
+                if (!modoExclusaoAtivo) onItemLongClick(bloco)
                 true
             }
         }
+    }
+}
+
+/**
+ * Classe auxiliar para o ListAdapter calcular as diferenças entre a lista antiga e a nova.
+ * Isso torna as atualizações da lista muito mais eficientes.
+ */
+class BlocoDiffCallback : DiffUtil.ItemCallback<Bloco>() {
+    override fun areItemsTheSame(oldItem: Bloco, newItem: Bloco): Boolean {
+        return oldItem.id == newItem.id
+    }
+
+    override fun areContentsTheSame(oldItem: Bloco, newItem: Bloco): Boolean {
+        // Compara os campos que afetam a UI para ver se o item precisa ser redesenhado
+        return oldItem == newItem
     }
 }

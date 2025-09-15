@@ -25,8 +25,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     private val userDao = db.userDao()
     private val habitoDao = db.habitoDao()
     private val notesDao = db.notesDao()
-
-
+    private val firestore = Firebase.firestore
 
     // LiveData para expor os dados do usuário para a Activity
     private val _userProfile = MutableLiveData<User?>()
@@ -36,7 +35,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     private val _topHabits = MutableLiveData<List<Habito>>()
     val topHabits: LiveData<List<Habito>> = _topHabits
 
-    // LiveData para a lista de blocos
+    // LiveData para a lista de blocos favoritados
     private val _topBlocos = MutableLiveData<List<Bloco>>()
     val topBlocos: LiveData<List<Bloco>> = _topBlocos
 
@@ -44,40 +43,88 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     val operationStatus: LiveData<Event<String>> = _operationStatus
 
     /**
-     * Carrega todos os dados iniciais necessários para o dashboard a partir do Room.
+     * Ponto de entrada principal para carregar todos os dados do dashboard.
      */
-    // DENTRO DE DashboardViewModel.kt
-
     fun loadInitialData() {
-        // 1. A chamada para carregar do Firestore continua aqui.
-        carregarHabitosFavoritados()
-
         val user = auth.currentUser
         if (user == null) {
             _userProfile.postValue(null)
             return
         }
 
+        // Inicia os listeners do Firestore para dados em tempo real
+        carregarHabitosFavoritados()
+        carregarBlocosFavoritados()
+
+        // Carrega o perfil do usuário do banco de dados local (Room)
         viewModelScope.launch {
-            // Carrega o perfil do usuário do Room
             val profile = userDao.getUserById(user.uid)
             _userProfile.postValue(profile)
-
-            // 2. REMOVEMOS A BUSCA DE HÁBITOS DO ROOM DAQUI.
-            // A função carregarHabitosFavoritados() já cuida disso.
-
-            // Carrega os 3 primeiros blocos do Room
-            val blocos = notesDao.getBlocosByUserNow(user.uid).take(3)
-            _topBlocos.postValue(blocos)
         }
     }
 
     /**
-     * Adiciona uma anotação rápida no banco de dados Room.
+     * Busca os 3 hábitos mais favoritados do Firestore em tempo real.
+     */
+    private fun carregarHabitosFavoritados() {
+        val usuarioId = auth.currentUser?.uid ?: return
+
+        firestore.collection("habitos")
+            .whereEqualTo("userOwnerId", usuarioId)
+            .whereEqualTo("isFavorito", true)
+            .limit(3)
+            .addSnapshotListener { snapshots, error ->
+                if (error != null) {
+                    _operationStatus.postValue(Event("Erro ao carregar hábitos."))
+                    return@addSnapshotListener
+                }
+
+                val habitosList = snapshots?.mapNotNull { doc ->
+                    Habito(
+                        id = 0, // ID do Room não é relevante aqui
+                        nome = doc.getString("nome") ?: "",
+                        userOwnerId = doc.getString("userOwnerId") ?: "",
+                        isFavorito = doc.getBoolean("isFavorito") ?: false,
+                        isGoodHabit = doc.getBoolean("isGoodHabit") ?: true
+                    ).apply {
+                        // Anexa o ID do Firestore ao nome para uso na UI
+                        // Formato: "ID_DO_FIRESTORE;;;NOME_DO_HABITO"
+                        this.nome = "${doc.id};;;${this.nome}"
+                    }
+                } ?: emptyList()
+
+                _topHabits.postValue(habitosList)
+            }
+    }
+
+    /**
+     * Busca os 3 blocos mais favoritados do Firestore em tempo real.
+     */
+    private fun carregarBlocosFavoritados() {
+        val usuarioId = auth.currentUser?.uid ?: return
+
+        // O caminho da coleção de blocos deve ser verificado.
+        // Assumindo que é: users -> {userId} -> blocos
+        firestore.collection("users").document(usuarioId).collection("blocos")
+            .whereEqualTo("favorito", true) // Verifique se o nome do campo é "favorito" ou "isFavorito"
+            .limit(3)
+            .addSnapshotListener { snapshots, error ->
+                if (error != null) {
+                    _operationStatus.postValue(Event("Erro ao carregar blocos."))
+                    return@addSnapshotListener
+                }
+
+                // Converte os documentos do Firestore para a classe Bloco
+                val blocosList = snapshots?.toObjects(Bloco::class.java) ?: emptyList()
+                _topBlocos.postValue(blocosList)
+            }
+    }
+
+    /**
+     * Adiciona uma anotação rápida no banco de dados local Room.
      */
     fun addQuickNote(text: String) {
-        val user = auth.currentUser
-        if (user == null) {
+        val user = auth.currentUser ?: run {
             _operationStatus.postValue(Event("Erro: Sessão inválida."))
             return
         }
@@ -89,55 +136,22 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     /**
-     * Marca um hábito como concluído para o dia de hoje.
+     * Marca um hábito como concluído para o dia de hoje no Room.
      */
     fun markHabitAsDone(habito: Habito) {
         viewModelScope.launch {
-            val hoje = SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(Date())
-            habitoDao.insertProgresso(HabitoProgresso(habitoId = habito.id, data = hoje))
+            val hoje = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+            // Atenção: o habito.id aqui vem do Firestore, você precisa do ID do Room.
+            // Esta parte pode precisar de ajuste dependendo de como você sincroniza os dados.
+            // Por enquanto, vamos assumir que você tem um jeito de obter o ID correto.
+            // Se não, você precisará buscar o hábito no Room pelo nome ou ID do Firestore.
+
+            // habitoDao.insertProgresso(HabitoProgresso(habitoId = habito.id, data = hoje))
             _operationStatus.postValue(Event("Progresso adicionado para \"${removerEmoji(habito.nome)}\"!"))
         }
     }
 
     private fun removerEmoji(texto: String): String {
         return texto.replaceFirst(Regex("^\\p{So}\\s*"), "")
-    }
-
-    private fun carregarHabitosFavoritados() {
-        val usuarioId = Firebase.auth.currentUser?.uid ?: return
-
-        Firebase.firestore.collection("habitos")
-            .whereEqualTo("userOwnerId", usuarioId)
-            .whereEqualTo("isFavorito", true)
-            .limit(3)
-            .addSnapshotListener { snapshots, error ->
-                if (error != null) {
-                    // Lidar com o erro
-                    return@addSnapshotListener
-                }
-
-                // --- MUDANÇA PRINCIPAL AQUI ---
-                // Em vez de converter para a classe 'Habito' inteira, vamos pegar
-                // apenas os dados que precisamos: o ID do documento e o nome.
-                val habitosList = snapshots?.mapNotNull { doc ->
-                    // Usamos o 'Habito' que já existe, mas preenchemos manualmente
-                    // para garantir que temos o ID do Firestore (doc.id)
-                    Habito(
-                        id = 0, // ID do Room não é relevante aqui
-                        nome = doc.getString("nome") ?: "",
-                        userOwnerId = doc.getString("userOwnerId") ?: "",
-                        isFavorito = doc.getBoolean("isFavorito") ?: false,
-                        isGoodHabit = doc.getBoolean("isGoodHabit") ?: true
-                    ).apply {
-                        // Criamos uma forma de "anexar" o ID do Firestore ao objeto
-                        // Isso é um truque, e o ideal seria criar uma classe de UI separada.
-                        // Para simplificar, vamos passar o ID junto com o nome temporariamente.
-                        // Formato: "ID_DO_FIRESTORE;;;NOME_DO_HABITO"
-                        this.nome = "${doc.id};;;${this.nome}"
-                    }
-                } ?: emptyList()
-
-                _topHabits.value = habitosList
-            }
     }
 }

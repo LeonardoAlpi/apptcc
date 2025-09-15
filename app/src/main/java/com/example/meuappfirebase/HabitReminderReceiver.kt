@@ -1,4 +1,3 @@
-
 package com.apol.myapplication
 
 import android.app.NotificationChannel
@@ -9,57 +8,88 @@ import android.content.Intent
 import android.os.Build
 import android.util.Log
 import androidx.core.app.NotificationCompat
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+import com.apol.myapplication.data.model.Habito
 import com.example.meuappfirebase.R
+import com.google.firebase.auth.ktx.auth
+import com.google.firebase.ktx.Firebase
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.*
 
 class HabitReminderReceiver : BroadcastReceiver() {
 
-    private val TAG = "HABIT_DEBUG" // Nossa tag para filtrar as mensagens
+    private val TAG = "HabitReminderReceiver"
 
     override fun onReceive(context: Context, intent: Intent) {
-        Log.d(TAG, "--- HabitReminderReceiver ACORDOU! ---")
+        Log.d(TAG, "==============================================")
+        Log.d(TAG, "Alarme recebido! Iniciando verificação...")
+        val pendingResult = goAsync()
 
-        val habitsPrefs = context.getSharedPreferences("habitos_prefs", Context.MODE_PRIVATE)
-        val allHabitsString = habitsPrefs.getString("habits_list_ordered", null)
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                verificarEnotificarHabitos(context)
+            } finally {
+                pendingResult.finish()
+                Log.d(TAG, "Verificação finalizada.")
+                Log.d(TAG, "==============================================")
+            }
+        }
+    }
 
-        Log.d(TAG, "Procurando lista de hábitos. Valor encontrado: '$allHabitsString'")
-
-        if (allHabitsString.isNullOrEmpty()) {
-            Log.d(TAG, "Lista de hábitos está vazia ou nula. Encerrando verificação.")
+    private suspend fun verificarEnotificarHabitos(context: Context) {
+        val usuario = Firebase.auth.currentUser
+        if (usuario == null) {
+            Log.e(TAG, "ERRO: Usuário nulo. O Receiver não pode continuar.")
             return
         }
+        Log.d(TAG, "Usuário encontrado: ${usuario.uid}")
 
-        val allHabits = allHabitsString.split(";;;")
-        val todayKey = SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(Date())
-        Log.d(TAG, "Hábitos a verificar: $allHabits. Chave do dia: $todayKey")
+        val hojeStr = SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(Date())
+        val dao = AppDatabase.getDatabase(context).habitoDao()
+        Log.d(TAG, "Data de hoje para verificação: $hojeStr")
 
-        val incompleteHabits = allHabits.filter { habit ->
-            val progressKey = "${habit}_$todayKey"
-            val progressValue = habitsPrefs.getInt(progressKey, 0)
-            Log.d(TAG, "Verificando '$habit'. Chave de progresso: '$progressKey'. Progresso encontrado: $progressValue")
-            progressValue == 0
+        // 1. Pega TODOS os hábitos do usuário
+        val todosHabitos: List<Habito> = dao.getHabitosByUser(usuario.uid)
+        // LOG DE DEPURAÇÃO:
+        Log.d(TAG, "Passo 1: dao.getHabitosByUser retornou ${todosHabitos.size} hábito(s).")
+        if (todosHabitos.isNotEmpty()) {
+            Log.d(TAG, "Nomes dos hábitos encontrados: ${todosHabitos.joinToString { it.nome }}")
         }
 
-        Log.d(TAG, "Verificação concluída. Hábitos incompletos encontrados: $incompleteHabits")
+        // 2. Pega os IDs de todos os hábitos já CONCLUÍDOS hoje
+        val habitosConcluidosIds: Set<Long> = dao.getCompletedHabitIdsForDate(hojeStr).toSet()
+        // LOG DE DEPURAÇÃO:
+        Log.d(TAG, "Passo 2: dao.getCompletedHabitIdsForDate retornou ${habitosConcluidosIds.size} ID(s) concluído(s) hoje.")
+        if (habitosConcluidosIds.isNotEmpty()) {
+            Log.d(TAG, "IDs concluídos: $habitosConcluidosIds")
+        }
 
-        if (incompleteHabits.isNotEmpty()) {
-            Log.d(TAG, "Encontrou hábitos incompletos. Preparando para enviar notificação...")
-            val habitName = removerEmoji(incompleteHabits.first()).trim()
-            val message = if (incompleteHabits.size > 1) {
-                "Você ainda não completou '$habitName' e outros hábitos hoje."
+        // 3. Filtra para encontrar os hábitos PENDENTES
+        val habitosPendentes = todosHabitos.filter { habito ->
+            habito.id !in habitosConcluidosIds
+        }
+
+        Log.d(TAG, "Passo 3: Filtro resultou em ${habitosPendentes.size} hábito(s) pendente(s).")
+        Log.d(TAG, "Nomes dos hábitos pendentes: ${habitosPendentes.joinToString { it.nome }}")
+
+        if (habitosPendentes.isNotEmpty()) {
+            val primeiroHabitoPendente = habitosPendentes.first()
+            val nomeHabito = removerEmoji(primeiroHabitoPendente.nome).trim()
+
+            val mensagem = if (habitosPendentes.size > 1) {
+                "Lembrete: '${nomeHabito}' e outros hábitos ainda não foram concluídos hoje!"
             } else {
-                "Lembrete: Você ainda não completou o hábito '$habitName' hoje."
+                "Lembrete: Você ainda não completou o hábito '${nomeHabito}' hoje."
             }
-            sendNotification(context, "Não se esqueça dos seus hábitos!", message)
+            sendNotification(context, "Não se esqueça dos seus hábitos!", mensagem)
         } else {
-            Log.d(TAG, "Nenhum hábito incompleto encontrado. Nenhuma notificação será enviada.")
+            Log.d(TAG, "Conclusão: Nenhum hábito pendente encontrado. Nenhuma notificação necessária.")
         }
     }
 
     private fun sendNotification(context: Context, title: String, message: String) {
-        // ... (o resto da função sendNotification permanece o mesmo)
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         val channelId = "habit_reminder_channel"
 
@@ -69,7 +99,7 @@ class HabitReminderReceiver : BroadcastReceiver() {
         }
 
         val notification = NotificationCompat.Builder(context, channelId)
-            .setSmallIcon(R.drawable.ic_notification_icon) // Garanta que este ícone existe em res/drawable
+            .setSmallIcon(R.drawable.ic_notification_icon) // Garanta que este ícone existe
             .setContentTitle(title)
             .setContentText(message)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
@@ -77,7 +107,7 @@ class HabitReminderReceiver : BroadcastReceiver() {
             .build()
 
         notificationManager.notify(1, notification)
-        Log.d(TAG, "NOTIFICAÇÃO ENVIADA!")
+        Log.d(TAG, "Notificação enviada: $message")
     }
 
     private fun removerEmoji(texto: String): String {
