@@ -1,4 +1,4 @@
-package com.example.meuappfirebase // Ou o pacote dos seus ViewModels
+package com.example.meuappfirebase
 
 import android.util.Log
 import androidx.lifecycle.ViewModel
@@ -12,7 +12,10 @@ class HomeViewModel : ViewModel() {
 
     private val firestore = Firebase.firestore
     private val auth = Firebase.auth
-    private val usuarioLogadoId = auth.currentUser?.uid
+
+    // CORRIGIDO: Obtém o ID do usuário apenas quando necessário, garantindo que seja o mais recente.
+    private val usuarioLogadoId: String?
+        get() = auth.currentUser?.uid
 
     // StateFlow para expor a lista de hábitos favoritados para a UI
     private val _favoritedHabitsList = MutableStateFlow<List<HabitUI>>(emptyList())
@@ -42,17 +45,25 @@ class HomeViewModel : ViewModel() {
                 // Mapeia os documentos para a nossa classe de UI (HabitUI)
                 val habits = snapshots?.documents?.mapNotNull { doc ->
                     try {
+                        val nome = doc.getString("nome") ?: ""
+                        val userOwnerId = doc.getString("userOwnerId") ?: ""
+                        val isFavorito = doc.getBoolean("isFavorito") ?: false
+                        val isGoodHabit = doc.getBoolean("isGoodHabit") ?: true
+
                         HabitUI(
                             id = doc.id,
-                            name = doc.getString("nome") ?: "",
-                            // Preencha outros campos se necessário, mas para o widget só precisamos do ID e nome
+                            name = nome,
+                            // Esses campos não são necessários para a lista de favoritos, mas o construtor exige.
+                            // Passamos valores padrão seguros.
                             streakDays = 0,
                             message = "",
                             count = 0,
-                            isFavorited = true,
-                            isGoodHabit = true
+                            isFavorited = isFavorito,
+                            isGoodHabit = isGoodHabit,
+                            userOwnerId = userOwnerId // CORREÇÃO: O campo foi adicionado
                         )
                     } catch (e: Exception) {
+                        Log.e("HomeViewModel", "Erro ao converter documento para HabitUI", e)
                         null
                     }
                 } ?: emptyList()

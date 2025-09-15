@@ -19,19 +19,7 @@ class saudemental : AppCompatActivity() {
         binding = ActivitySaudementalBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Verifica se o usuário já respondeu a tela de saúde mental
-        lifecycleScope.launch {
-            val user = viewModel.getCurrentUserFromRoom()
-            if (user != null &&
-                !user.espacosDisponiveis.isNullOrEmpty() && // Flag de perguntas iniciais respondidas
-                !user.praticaAtividade.isNullOrEmpty()
-            ) {
-                // Usuário já respondeu, vai direto para a próxima tela
-                startActivity(Intent(this@saudemental, pergunta01::class.java))
-                finish()
-                return@launch
-            }
-        }
+        // Verificação duplicada em onCreate foi REMOVIDA para centralizar a lógica no Roteador.
 
         configurarCheckBoxes()
         configurarBotaoAvancar()
@@ -101,16 +89,26 @@ class saudemental : AppCompatActivity() {
                 return@setOnClickListener
             }
 
-            // Salva no Room e Firebase
-            viewModel.saveMentalHealthAndCreateLocalHabits(habitosSelecionados, problemasEmocionaisSelecionados) {
-                // Navega para a próxima tela após o sucesso
-                startActivity(Intent(this, pergunta01::class.java))
-                finish()
-            }
+            // <-- MUDANÇA PRINCIPAL
+            // Chama a nova função no ViewModel para salvar os dados e ATUALIZAR O PASSO
+            viewModel.salvarDadosEtapa3(habitosSelecionados, problemasEmocionaisSelecionados)
         }
     }
 
     private fun observarEstado() {
+        // Observa o sucesso da atualização para navegar de volta ao Roteador
+        lifecycleScope.launch {
+            viewModel.onboardingStepUpdated.collect { success ->
+                if (success) {
+                    // Dados salvos, volta para o Roteador decidir o próximo passo
+                    val intent = Intent(this@saudemental, RoteadorActivity::class.java)
+                    startActivity(intent)
+                    finish()
+                }
+            }
+        }
+
+        // Observa possíveis erros
         lifecycleScope.launch {
             viewModel.uiState.collect { state ->
                 state.error?.let { Toast.makeText(this@saudemental, it, Toast.LENGTH_LONG).show() }

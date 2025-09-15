@@ -7,7 +7,8 @@ interface UserDao {
 
     // --- Operações para a Tabela 'users' ---
 
-    @Insert
+    // CORRIGIDO: Adicionado OnConflictStrategy.REPLACE para evitar o crash
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertUser(user: User)
 
     // Busca o usuário pelo ID único do Firebase (UID)
@@ -35,7 +36,7 @@ interface UserDao {
     @Query("SELECT * FROM weight_history WHERE userOwnerId = :userId ORDER BY date ASC")
     suspend fun getWeightHistory(userId: String): List<WeightEntry>
 
-
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertOrUpdateUser(user: User)
+    // REMOVIDO: A função abaixo era redundante, já que 'insertUser' agora faz a mesma coisa.
+    // @Insert(onConflict = OnConflictStrategy.REPLACE)
+    // suspend fun insertOrUpdateUser(user: User)
 }

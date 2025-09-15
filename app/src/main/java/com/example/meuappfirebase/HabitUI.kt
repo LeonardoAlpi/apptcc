@@ -8,5 +8,6 @@ data class HabitUI(
     val count: Int,
     val isFavorited: Boolean,
     val isGoodHabit: Boolean, // Adicionado para facilitar o filtro
+    val userOwnerId: String, // Campo adicionado para armazenar o ID do dono
     var isSelected: Boolean = false
 )

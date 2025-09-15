@@ -15,6 +15,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.isVisible
 import com.apol.myapplication.data.model.Bloco
 import com.apol.myapplication.data.model.Habito
+import com.apol.myapplication.data.model.User // Importe a classe User
 import com.bumptech.glide.Glide
 import com.bumptech.glide.request.RequestOptions
 import com.example.meuappfirebase.databinding.ActivityBemvindouserBinding
@@ -46,17 +47,19 @@ class Bemvindouser : AppCompatActivity() {
         finishAffinity()
     }
 
-
     private fun observarViewModel() {
         viewModel.userProfile.observe(this) { user ->
             if (user != null) {
+                // CORRIGIDO: Usando o operador Elvis para fornecer um valor padrão se o nome for nulo
+                val nomeDoUsuario = user.nome ?: "Usuário"
                 val saudacao = if (user.genero.equals("Feminino", ignoreCase = true)) "Bem-vinda" else "Bem-vindo"
-                binding.welcomeText.text = "$saudacao, ${user.nome}!"
+                binding.welcomeText.text = "$saudacao, $nomeDoUsuario!"
 
+                // CORRIGIDO: Verificação segura para `user.nome` antes de usá-lo
                 if (!user.profilePicUri.isNullOrEmpty()) {
                     Glide.with(this).load(user.profilePicUri).apply(RequestOptions.circleCropTransform()).into(binding.ivProfilePicture)
                 } else {
-                    val initials = user.nome.split(" ").mapNotNull { it.firstOrNull()?.uppercase() }.take(2).joinToString("")
+                    val initials = nomeDoUsuario.split(" ").mapNotNull { it.firstOrNull()?.uppercase() }.take(2).joinToString("")
                     val placeholder = InitialsDrawable(initials, getColor(R.color.roxo)) // Adapte a cor se necessário
                     binding.ivProfilePicture.setImageDrawable(placeholder)
                 }

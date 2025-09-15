@@ -6,7 +6,7 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import com.apol.myapplication.data.model.*
-import com.apol.myapplication.Converters // <- nosso conversor único
+import com.apol.myapplication.Converters
 
 @Database(
     entities = [
@@ -21,10 +21,10 @@ import com.apol.myapplication.Converters // <- nosso conversor único
         Bloco::class,
         HabitoAgendamento::class
     ],
-    version = 14,
+    version = 17,
     exportSchema = false
 )
-@TypeConverters(Converters::class) // <- garante que Room use nosso conversor
+@TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun userDao(): UserDao
@@ -43,7 +43,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "app_database"
                 )
-                    .fallbackToDestructiveMigration() // recria o banco se a versão mudar
+                    .fallbackToDestructiveMigration() // Isso já estava correto!
                     .build()
                 INSTANCE = instance
                 instance

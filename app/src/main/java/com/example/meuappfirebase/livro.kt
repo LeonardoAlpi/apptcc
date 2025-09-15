@@ -19,17 +19,9 @@ class livro : AppCompatActivity() {
         binding = ActivityLivroBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Verifica se o usuário já respondeu as perguntas de hábitos iniciais
-        lifecycleScope.launch {
-            val user = viewModel.getCurrentUserFromRoom()
-            if (user != null && user.temHabitoLeitura != null &&
-                user.segueDieta != null && user.gostariaSeguirDieta != null) {
-                // Usuário já respondeu, vai direto para a próxima tela
-                startActivity(Intent(this@livro, saudemental::class.java))
-                finish()
-                return@launch
-            }
-        }
+        // A verificação que existia aqui foi removida. O RoteadorActivity
+        // já é responsável por garantir que o usuário chegue na tela certa.
+        // Isso simplifica o código e centraliza a lógica de navegação.
 
         configurarBotaoAvancar()
         observarEstado()
@@ -58,17 +50,24 @@ class livro : AppCompatActivity() {
                 return@setOnClickListener
             }
 
-            // Salva no Room e Firebase
-            viewModel.saveUserInitialHabits(temHabitoLeitura, segueDieta, gostariaSeguirDieta) {
-                Toast.makeText(this, "Preferências salvas!", Toast.LENGTH_SHORT).show()
-                val intent = Intent(this, saudemental::class.java)
-                startActivity(intent)
-                finish()
-            }
+            // <-- MUDANÇA PRINCIPAL
+            // Chama a nova função no ViewModel para salvar os dados e ATUALIZAR O PASSO
+            viewModel.salvarDadosEtapa2(temHabitoLeitura, segueDieta, gostariaSeguirDieta)
         }
     }
 
     private fun observarEstado() {
+        lifecycleScope.launch {
+            // Observa o estado para saber quando a atualização terminou
+            viewModel.onboardingStepUpdated.collect { success ->
+                if (success) {
+                    // Dados salvos com sucesso, volta para o Roteador
+                    val intent = Intent(this@livro, RoteadorActivity::class.java)
+                    startActivity(intent)
+                    finish()
+                }
+            }
+        }
         lifecycleScope.launch {
             viewModel.uiState.collect { state ->
                 state.error?.let {

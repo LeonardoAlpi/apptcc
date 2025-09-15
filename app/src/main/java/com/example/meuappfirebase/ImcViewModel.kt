@@ -12,6 +12,7 @@ import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.launch
 import java.text.DecimalFormat
+import kotlin.math.pow
 
 // Data class para empacotar o resultado do IMC para a UI
 data class ImcResult(
@@ -44,14 +45,20 @@ class ImcViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun calculateImc(user: User) {
-        if (user.altura > 0 && user.peso > 0) {
-            val imcValue = user.peso / (user.altura * user.altura)
-            val df = DecimalFormat("#.#")
-            val (classification, color) = getClassificacaoImc(imcValue)
-            _imcResult.postValue(ImcResult(df.format(imcValue), classification, color))
-        } else {
-            _imcResult.postValue(null)
-        }
+        // CORREÇÃO: Usando 'let' para criar um escopo seguro com valores não nulos.
+        // O let só será executado se altura e peso não forem nulos.
+        user.altura?.let { altura ->
+            user.peso?.let { peso ->
+                if (altura > 0 && peso > 0) {
+                    val imcValue = peso / (altura.pow(2))
+                    val df = DecimalFormat("#.#")
+                    val (classification, color) = getClassificacaoImc(imcValue)
+                    _imcResult.postValue(ImcResult(df.format(imcValue), classification, color))
+                } else {
+                    _imcResult.postValue(null)
+                }
+            }
+        } ?: _imcResult.postValue(null) // Se altura ou peso forem nulos, postamos null.
     }
 
     private fun getClassificacaoImc(imc: Float): Pair<String, Int> {

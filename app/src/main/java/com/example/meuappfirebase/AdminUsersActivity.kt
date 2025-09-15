@@ -1,4 +1,3 @@
-
 package com.apol.myapplication
 
 import android.os.Bundle
@@ -38,7 +37,6 @@ class AdminUsersActivity : AppCompatActivity() {
     private fun setupRecyclerView() {
         val recyclerView = findViewById<RecyclerView>(R.id.users_recyclerview)
         userAdapter = UserAdapter(emptyList()) { user ->
-            // Ação do clique no botão de deletar
             showDeleteConfirmationDialog(user)
         }
         recyclerView.adapter = userAdapter
@@ -54,9 +52,11 @@ class AdminUsersActivity : AppCompatActivity() {
     }
 
     private fun showDeleteConfirmationDialog(user: User) {
+        val userEmail = user.email ?: "usuário sem e-mail"
+
         AlertDialog.Builder(this)
             .setTitle("Confirmar Exclusão")
-            .setMessage("Tem certeza que deseja apagar o usuário ${user.email}?")
+            .setMessage("Tem certeza que deseja apagar o usuário $userEmail?")
             .setPositiveButton("Sim") { _, _ ->
                 deleteUser(user)
             }
@@ -65,13 +65,20 @@ class AdminUsersActivity : AppCompatActivity() {
     }
 
     private fun deleteUser(user: User) {
-        lifecycleScope.launch {
-            db.userDao().deleteUserById(user.userId)
-            // Recarrega a lista após a exclusão
-            runOnUiThread {
-                Toast.makeText(this@AdminUsersActivity, "Usuário apagado.", Toast.LENGTH_SHORT).show()
-                loadUsers()
+        // CORREÇÃO: Usando 'let' para garantir que o userId não é nulo antes de usá-lo.
+        user.userId?.let { nonNullUserId ->
+            lifecycleScope.launch {
+                // A sua classe UserDao precisa ter um método para deletar pelo ID do usuário
+                db.userDao().deleteUserById(nonNullUserId)
+
+                runOnUiThread {
+                    Toast.makeText(this@AdminUsersActivity, "Usuário apagado.", Toast.LENGTH_SHORT).show()
+                    loadUsers()
+                }
             }
+        } ?: run {
+            // Caso o userId seja nulo, exibe uma mensagem de erro
+            Toast.makeText(this, "Erro: ID do usuário é nulo. Não foi possível apagar.", Toast.LENGTH_SHORT).show()
         }
     }
 }

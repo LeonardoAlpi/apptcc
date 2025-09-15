@@ -49,9 +49,11 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         val firestoreProfileUpdate = mapOf(
             "nome" to updatedRoomUser.nome,
             "idade" to updatedRoomUser.idade,
-            "peso" to updatedRoomUser.peso.toDouble(),
-            "altura" to updatedRoomUser.altura.toDouble(),
+            "peso" to updatedRoomUser.peso,
+            "altura" to updatedRoomUser.altura,
             "genero" to updatedRoomUser.genero,
+            "perguntaSecreta" to updatedRoomUser.perguntaSecreta,
+            "respostaSecreta" to updatedRoomUser.respostaSecreta,
             "profilePicUri" to updatedRoomUser.profilePicUri
         )
 
@@ -82,9 +84,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 
         storageRef.putFile(imageUri)
             .addOnSuccessListener {
-                // Pega a URL de download da imagem
                 storageRef.downloadUrl.addOnSuccessListener { downloadUrl ->
-                    // Agora atualiza o perfil com a nova URL
                     viewModelScope.launch {
                         val roomUser = userDao.getUserById(user.uid)
                         roomUser?.let {

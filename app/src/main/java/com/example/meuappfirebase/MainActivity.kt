@@ -22,6 +22,7 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        // Chama a verificação de sessão assim que a tela é criada
         verificarSessaoAtiva()
         configurarBotoes()
         observarEstado()
@@ -56,6 +57,8 @@ class MainActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
 
+            binding.progressBar.visibility = View.VISIBLE
+
             // 1. Tenta fazer o login
             viewModel.login(email, senha) {
                 // 2. Se o login for bem-sucedido, inicia a sincronização
@@ -65,7 +68,8 @@ class MainActivity : AppCompatActivity() {
         }
 
         binding.textView8.setOnClickListener {
-            startActivity(Intent(this, RegistroActivity::class.java))
+            val intent = Intent(this, RegistroActivity::class.java)
+            startActivity(intent)
         }
         binding.textView5.setOnClickListener {
             Toast.makeText(this, "Tela de Recuperar Senha a ser implementada", Toast.LENGTH_SHORT).show()

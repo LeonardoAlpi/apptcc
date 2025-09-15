@@ -32,7 +32,7 @@ class UserAdapter(
 
     override fun onBindViewHolder(holder: UserViewHolder, position: Int) {
         val user = userList[position]
-        holder.emailTextView.text = user.email
+        holder.emailTextView.text = user.email ?: "E-mail não disponível"
         holder.deleteButton.setOnClickListener {
             onDeleteClick(user)
         }

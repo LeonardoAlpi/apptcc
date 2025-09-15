@@ -20,21 +20,13 @@ class pergunta01 : AppCompatActivity() {
         binding = ActivityPergunta01Binding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Verifica se o usuário já respondeu esta tela
-        lifecycleScope.launch {
-            val user = viewModel.getCurrentUserFromRoom()
-            if (user != null &&
-                !user.praticaAtividade.isNullOrEmpty() &&
-                !user.tempoDisponivel.isNullOrEmpty() &&
-                !user.espacosDisponiveis.isNullOrEmpty()
-            ) {
-                // Usuário já respondeu, vai direto para a próxima tela
-                startActivity(Intent(this@pergunta01, sujestao::class.java))
-                finish()
-                return@launch
-            }
-        }
+        // Verificação redundante em onCreate foi REMOVIDA.
 
+        configurarBotaoAvancar()
+        observarEstado() // <-- Adicionado para um fluxo correto
+    }
+
+    private fun configurarBotaoAvancar() {
         binding.buttonavancaratividades.setOnClickListener {
             val idPratica = binding.radioGroupPraticaAtividade.checkedRadioButtonId
             val idTempo = binding.radioGroupTempo.checkedRadioButtonId
@@ -54,15 +46,31 @@ class pergunta01 : AppCompatActivity() {
                 return@setOnClickListener
             }
 
-            // Pega os textos das respostas
             val praticaAtividade = findViewById<RadioButton>(idPratica).text.toString()
             val tempoDisponivel = findViewById<RadioButton>(idTempo).text.toString()
 
-            // Salva os dados no ViewModel
-            viewModel.saveWorkoutPreferences(praticaAtividade, tempoDisponivel, espacos) {
-                // Navega para a próxima tela após salvar
-                startActivity(Intent(this, sujestao::class.java))
-                finish()
+            // <-- MUDANÇA PRINCIPAL
+            // Chama a nova função no ViewModel para salvar os dados e ATUALIZAR O PASSO
+            viewModel.salvarDadosEtapa4(praticaAtividade, tempoDisponivel, espacos)
+        }
+    }
+
+    private fun observarEstado() {
+        // Observa o sucesso da atualização para navegar de volta ao Roteador
+        lifecycleScope.launch {
+            viewModel.onboardingStepUpdated.collect { success ->
+                if (success) {
+                    val intent = Intent(this@pergunta01, RoteadorActivity::class.java)
+                    startActivity(intent)
+                    finish()
+                }
+            }
+        }
+
+        // Observa possíveis erros
+        lifecycleScope.launch {
+            viewModel.uiState.collect { state ->
+                state.error?.let { Toast.makeText(this@pergunta01, it, Toast.LENGTH_LONG).show() }
             }
         }
     }

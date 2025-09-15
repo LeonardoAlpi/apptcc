@@ -61,7 +61,7 @@ class WeightProgressViewModel(application: Application) : AndroidViewModel(appli
             userDao.insertWeightEntry(newEntry)
 
             // 2. Atualiza o peso principal no perfil do usuário
-            val updatedUser = currentUser.copy(peso = newWeight.toInt())
+            val updatedUser = currentUser.copy(peso = newWeight)
             userDao.updateUser(updatedUser)
 
             _operationStatus.postValue(Event("Peso salvo com sucesso!"))
@@ -72,8 +72,13 @@ class WeightProgressViewModel(application: Application) : AndroidViewModel(appli
     }
 
     private fun calculateImc(user: User) {
-        if (user.altura > 0 && user.peso > 0) {
-            val imcValue = user.peso / (user.altura * user.altura)
+        val alturaLocal = user.altura
+        val pesoLocal = user.peso
+
+// Agora, use as cópias locais, que são seguras
+        if (alturaLocal != null && alturaLocal > 0 && pesoLocal != null && pesoLocal > 0) {
+            // O smart cast funciona perfeitamente nas cópias locais!
+            val imcValue = pesoLocal / (alturaLocal * alturaLocal)
             val df = DecimalFormat("#.#")
             val (classification, color) = getClassificacaoImc(imcValue)
             _imcResult.postValue(ImcResult(df.format(imcValue), classification, color))

@@ -149,7 +149,7 @@ class configuracoes : AppCompatActivity() {
         btnSalvar.setOnClickListener {
             val nome = editNome.text.toString().trim()
             val idade = editIdade.text.toString().toIntOrNull() ?: currentUser.idade
-            val peso = editPeso.text.toString().toIntOrNull() ?: currentUser.peso
+            val peso = editPeso.text.toString().toFloatOrNull() ?: currentUser.peso
             val altura = editAltura.text.toString().toFloatOrNull() ?: currentUser.altura
             val genero = if (radioFeminino.isChecked) "Feminino" else "Masculino"
 

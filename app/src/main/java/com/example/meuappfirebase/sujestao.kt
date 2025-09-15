@@ -19,21 +19,11 @@ class sujestao : AppCompatActivity() {
         binding = ActivitySujestaoBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Verifica se o usuário já respondeu as sugestões
-        lifecycleScope.launch {
-            val user = viewModel.getCurrentUserFromRoom()
-            if (user != null && !user.sugestoesInteresse.isNullOrEmpty()) {
-                // Usuário já respondeu, vai direto para a tela principal
-                val intent = Intent(this@sujestao, Bemvindouser::class.java)
-                intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                startActivity(intent)
-                finish()
-                return@launch
-            }
-        }
+        // Verificação redundante em onCreate foi REMOVIDA.
 
         configurarCheckBoxes()
         configurarBotaoAvancar()
+        observarEstado() // <-- Adicionado para o fluxo correto
     }
 
     private fun configurarBotaoAvancar() {
@@ -55,13 +45,29 @@ class sujestao : AppCompatActivity() {
                 return@setOnClickListener
             }
 
-            // Salva no Room e Firebase
-            viewModel.saveSuggestionPreferences(interessesSelecionados) {
-                Toast.makeText(this, "Cadastro finalizado!", Toast.LENGTH_SHORT).show()
-                val intent = Intent(this, Bemvindouser::class.java)
-                intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                startActivity(intent)
-                finish()
+            // <-- MUDANÇA PRINCIPAL
+            // Chama a nova função no ViewModel para salvar os dados e FINALIZAR o onboarding
+            viewModel.salvarDadosEtapa5(interessesSelecionados)
+        }
+    }
+
+    private fun observarEstado() {
+        // Observa o sucesso da atualização para navegar de volta ao Roteador
+        lifecycleScope.launch {
+            viewModel.onboardingStepUpdated.collect { success ->
+                if (success) {
+                    Toast.makeText(this@sujestao, "Cadastro finalizado!", Toast.LENGTH_SHORT).show()
+                    val intent = Intent(this@sujestao, RoteadorActivity::class.java)
+                    startActivity(intent)
+                    finish()
+                }
+            }
+        }
+
+        // Observa possíveis erros
+        lifecycleScope.launch {
+            viewModel.uiState.collect { state ->
+                state.error?.let { Toast.makeText(this@sujestao, it, Toast.LENGTH_LONG).show() }
             }
         }
     }
