@@ -7,6 +7,7 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import com.apol.myapplication.AppDatabase
+import com.apol.myapplication.data.model.User // Importe o User do seu Room DB
 import com.example.meuappfirebase.ia.AISuggestionsService
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.FieldValue
@@ -18,10 +19,7 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
-// Importa a classe Event de onde ela foi definida
-import com.example.meuappfirebase.Event // Certifique-se que o caminho esteja correto
-
-// Data class para representar o estado de cada card na UI (Sua classe, sem alterações)
+// Data class para representar o estado de cada card na UI
 data class SuggestionCardState(
     val key: String,
     val isVisible: Boolean,
@@ -40,15 +38,11 @@ data class Sugestao(
     val passos: List<String> = emptyList()
 )
 
-// **REMOVIDA**: A classe 'Event' foi removida daqui para evitar redeclaração.
-//              Agora ela é importada do seu arquivo original.
-
 class SuggestionsViewModel(application: Application) : AndroidViewModel(application) {
 
     private val auth = Firebase.auth
     private val firestore = Firebase.firestore
     private val userDao = AppDatabase.getDatabase(application).userDao()
-
     private val aiService = AISuggestionsService()
 
     private val _suggestionCards = MutableLiveData<List<SuggestionCardState>>()
@@ -77,19 +71,14 @@ class SuggestionsViewModel(application: Application) : AndroidViewModel(applicat
             val userProfile = userDao.getUserById(user.uid)
 
             try {
-                // 1. Gera as sugestões com o serviço de IA
                 val sugestoesDaIA = aiService.generateSuggestions(userProfile)
-
-                // 2. Salva as sugestões no Firestore
                 saveSuggestionsToFirestore(user.uid, sugestoesDaIA)
 
-                // 3. Busca o estado de conclusão de hoje
                 firestore.collection("usuarios").document(user.uid)
                     .collection("estadoSugestoes").document(hoje).get()
                     .addOnSuccessListener { dailyStateDoc ->
                         val concluidas = dailyStateDoc.get("concluidas") as? List<String> ?: emptyList()
-                        // 4. Constrói o estado da UI com os dois conjuntos de dados
-                        val userInterests = userProfile?.sugestoesInteresse ?: emptyList()
+                        val userInterests = userProfile?.sugestoesInteresse
                         buildUiStateFromAI(sugestoesDaIA, userInterests, concluidas)
                     }
             } catch (e: Exception) {
@@ -117,7 +106,7 @@ class SuggestionsViewModel(application: Application) : AndroidViewModel(applicat
 
     private fun buildUiStateFromAI(
         sugestoesIA: List<Sugestao>,
-        userInterests: List<String>,
+        userInterests: List<String>?,
         concluidas: List<String>
     ) {
         val cards = sugestoesIA.mapNotNull { sugestao ->
@@ -131,7 +120,7 @@ class SuggestionsViewModel(application: Application) : AndroidViewModel(applicat
                 }
             }
 
-            val isVisible = userInterests.any { interest ->
+            val isVisible = userInterests.isNullOrEmpty() || userInterests.any { interest ->
                 config.third.contains(interest, ignoreCase = true) || interest.contains(config.first, ignoreCase = true)
             }
 

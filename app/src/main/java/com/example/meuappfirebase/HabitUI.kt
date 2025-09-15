@@ -7,7 +7,7 @@ data class HabitUI(
     val message: String,
     val count: Int,
     val isFavorited: Boolean,
-    val isGoodHabit: Boolean, // Adicionado para facilitar o filtro
-    val userOwnerId: String, // Campo adicionado para armazenar o ID do dono
+    val isGoodHabit: Boolean,
+    val userOwnerId: String = "", // <-- ADICIONE O VALOR PADRÃO
     var isSelected: Boolean = false
 )

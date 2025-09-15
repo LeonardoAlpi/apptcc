@@ -2,6 +2,7 @@ package com.apol.myapplication
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -9,6 +10,7 @@ import android.os.Build
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.apol.myapplication.data.model.Habito
+import com.example.meuappfirebase.HabitosActivity
 import com.example.meuappfirebase.R
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
@@ -52,7 +54,6 @@ class HabitReminderReceiver : BroadcastReceiver() {
 
         // 1. Pega TODOS os hábitos do usuário
         val todosHabitos: List<Habito> = dao.getHabitosByUser(usuario.uid)
-        // LOG DE DEPURAÇÃO:
         Log.d(TAG, "Passo 1: dao.getHabitosByUser retornou ${todosHabitos.size} hábito(s).")
         if (todosHabitos.isNotEmpty()) {
             Log.d(TAG, "Nomes dos hábitos encontrados: ${todosHabitos.joinToString { it.nome }}")
@@ -60,30 +61,26 @@ class HabitReminderReceiver : BroadcastReceiver() {
 
         // 2. Pega os IDs de todos os hábitos já CONCLUÍDOS hoje
         val habitosConcluidosIds: Set<Long> = dao.getCompletedHabitIdsForDate(hojeStr).toSet()
-        // LOG DE DEPURAÇÃO:
         Log.d(TAG, "Passo 2: dao.getCompletedHabitIdsForDate retornou ${habitosConcluidosIds.size} ID(s) concluído(s) hoje.")
-        if (habitosConcluidosIds.isNotEmpty()) {
-            Log.d(TAG, "IDs concluídos: $habitosConcluidosIds")
-        }
 
         // 3. Filtra para encontrar os hábitos PENDENTES
         val habitosPendentes = todosHabitos.filter { habito ->
             habito.id !in habitosConcluidosIds
         }
-
         Log.d(TAG, "Passo 3: Filtro resultou em ${habitosPendentes.size} hábito(s) pendente(s).")
         Log.d(TAG, "Nomes dos hábitos pendentes: ${habitosPendentes.joinToString { it.nome }}")
+
 
         if (habitosPendentes.isNotEmpty()) {
             val primeiroHabitoPendente = habitosPendentes.first()
             val nomeHabito = removerEmoji(primeiroHabitoPendente.nome).trim()
 
             val mensagem = if (habitosPendentes.size > 1) {
-                "Lembrete: '${nomeHabito}' e outros hábitos ainda não foram concluídos hoje!"
+                "'$nomeHabito' e outros ${habitosPendentes.size - 1} hábitos estão esperando por você!"
             } else {
-                "Lembrete: Você ainda não completou o hábito '${nomeHabito}' hoje."
+                "Não se esqueça de completar o hábito '$nomeHabito' hoje."
             }
-            sendNotification(context, "Não se esqueça dos seus hábitos!", mensagem)
+            sendNotification(context, "Seus hábitos te aguardam!", mensagem)
         } else {
             Log.d(TAG, "Conclusão: Nenhum hábito pendente encontrado. Nenhuma notificação necessária.")
         }
@@ -92,6 +89,13 @@ class HabitReminderReceiver : BroadcastReceiver() {
     private fun sendNotification(context: Context, title: String, message: String) {
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         val channelId = "habit_reminder_channel"
+
+        // --- MUDANÇA AQUI: INTENÇÃO PARA ABRIR O APP AO TOCAR NA NOTIFICAÇÃO ---
+        val intent = Intent(context, HabitosActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
+        val pendingIntent = PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_IMMUTABLE)
+        // --- FIM DA MUDANÇA ---
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(channelId, "Lembretes de Hábitos", NotificationManager.IMPORTANCE_DEFAULT)
@@ -104,8 +108,10 @@ class HabitReminderReceiver : BroadcastReceiver() {
             .setContentText(message)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setAutoCancel(true)
+            .setContentIntent(pendingIntent) // <-- Linha adicionada para tornar a notificação clicável
             .build()
 
+        // Usar um ID fixo (ex: 1) garante que uma notificação substitua a anterior
         notificationManager.notify(1, notification)
         Log.d(TAG, "Notificação enviada: $message")
     }

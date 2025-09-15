@@ -1,29 +1,29 @@
 package com.example.meuappfirebase
 
-import android.Manifest // << IMPORTE NECESSÁRIO
+import android.Manifest
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager // << IMPORTE NECESSÁRIO
+import android.content.pm.PackageManager
 import android.graphics.*
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
-import android.os.Build // << IMPORTE NECESSÁRIO
+import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.widget.*
-import androidx.activity.result.contract.ActivityResultContracts // << IMPORTE NECESSÁRIO
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContextCompat // << IMPORTE NECESSÁRIO
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.meuappfirebase.databinding.ActivityHabitosBinding
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
 import java.util.*
 
 class HabitosActivity : AppCompatActivity() {
@@ -35,12 +35,12 @@ class HabitosActivity : AppCompatActivity() {
 
     private val allDays = setOf("SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT")
 
-    // --- NOVO: Lançador para pedir permissão de notificação ---
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted: Boolean ->
         if (isGranted) {
-            Toast.makeText(this, "Permissão concedida! Lembretes ativados.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Permissão concedida! Lembretes serão agendados.", Toast.LENGTH_SHORT).show()
+            viewModel.tryToScheduleHabitReminders()
         } else {
             Toast.makeText(this, "Permissão negada. Os lembretes de hábitos não funcionarão.", Toast.LENGTH_LONG).show()
         }
@@ -56,20 +56,13 @@ class HabitosActivity : AppCompatActivity() {
         configurarNavBar()
         observarViewModel()
 
-        // --- NOVAS CHAMADAS ---
         pedirPermissaoDeNotificacao()
         viewModel.tryToScheduleHabitReminders()
     }
 
-    // --- NOVA FUNÇÃO PARA PEDIR A PERMISSÃO ---
     private fun pedirPermissaoDeNotificacao() {
-        // Só é necessário para Android 13 (API 33) ou superior
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (ContextCompat.checkSelfPermission(
-                    this,
-                    Manifest.permission.POST_NOTIFICATIONS
-                ) != PackageManager.PERMISSION_GRANTED) {
-                // Se a permissão não foi concedida, lança o pop-up
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
                 requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
             }
         }
@@ -81,10 +74,9 @@ class HabitosActivity : AppCompatActivity() {
                 habitsAdapter.submitList(listaHabitos)
             }
         }
-        // ... (o resto da sua função observarViewModel continua igual)
         lifecycleScope.launch {
             viewModel.mostrandoHabitosBons.collect { isBons ->
-                binding.habitsTitle.text = if (isBons) "Seus Hábitos Bons" else "Seus Hábitos Ruins"
+                binding.habitsTitle.text = if (isBons) "Bons Hábitos" else "Hábitos a Mudar"
             }
         }
         lifecycleScope.launch {
@@ -104,15 +96,14 @@ class HabitosActivity : AppCompatActivity() {
 
     private fun abrirTelaDePermissaoDeAlarme() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            Toast.makeText(this, "Para lembretes funcionarem, por favor, ative esta permissão.", Toast.LENGTH_LONG).show()
             val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM)
             startActivity(intent)
-            Toast.makeText(this, "Por favor, ative a permissão de alarmes para os lembretes.", Toast.LENGTH_LONG).show()
         }
     }
 
     private fun setupRecyclerView() {
         habitsAdapter = HabitsAdapter(
-            // CÓDIGO CORRIGIDO AQUI:
             onItemClick = { habit ->
                 if (modoExclusaoAtivo) toggleSelecao(habit) else mostrarOpcoesHabito(habit)
             },
@@ -149,12 +140,9 @@ class HabitosActivity : AppCompatActivity() {
 
         binding.buttonToggleMode.setOnClickListener {
             if (modoExclusaoAtivo) desativarModoExclusao()
-            // ATUALIZADO: Chama a função toggle do ViewModel. Simples e direto.
             viewModel.toggleTipoHabito()
         }
     }
-
-    // A função 'atualizarTelaDeHabitos' foi REMOVIDA pois não é mais necessária.
 
     private fun configurarNavBar() {
         binding.navigationBar.botaoInicio.setOnClickListener {
@@ -190,7 +178,6 @@ class HabitosActivity : AppCompatActivity() {
             } else {
                 val diasSelecionados = toggles.filter { it.value.isChecked }.keys
                 val diasParaSalvar = if (diasSelecionados.isEmpty()) allDays else diasSelecionados
-                // Informa ao ViewModel o tipo de hábito a ser criado, baseado no estado atual do ViewModel.
                 viewModel.adicionarHabito(nome, diasParaSalvar, viewModel.mostrandoHabitosBons.value)
                 dialog.dismiss()
             }

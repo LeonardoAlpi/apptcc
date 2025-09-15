@@ -6,11 +6,8 @@
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
 
-
-
     <application
         android:name=".MyApplication"
-
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -21,9 +18,14 @@
         android:theme="@style/Theme.MeuAppFirebase">
 
         <receiver
-            android:name="com.apol.myapplication.HabitReminderReceiver"
+            android:name=".HabitReminderReceiver"
             android:enabled="true"
             android:exported="false" />
+
+        <receiver
+            android:name="com.apol.myapplication.BlocoNotificationReceiver"
+            android:exported="false" />
+
 
         <activity
             android:name=".MainActivity"
@@ -34,11 +36,10 @@
             </intent-filter>
         </activity>
 
-
         <activity
             android:name=".RoteadorActivity"
             android:exported="false"
-            android:theme="@style/Theme.App.Transparent"/>
+            android:theme="@style/Theme.MeuAppFirebase.Transparent"/>
 
         <activity android:name=".RegistroActivity" android:exported="false" />
         <activity android:name=".VerificationActivity" android:exported="false" />
@@ -60,9 +61,6 @@
         <activity android:name=".ActivityProgressoHabito" android:exported="false" />
         <activity android:name=".AdminUsersActivity" android:exported="false" />
         <activity android:name=".anotacoes" android:exported="false" />
-
-        <receiver android:name="com.apol.myapplication.BlocoNotificationReceiver" android:exported="false" />
-
 
     </application>
 

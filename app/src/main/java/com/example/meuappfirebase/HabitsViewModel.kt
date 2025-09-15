@@ -1,17 +1,22 @@
 package com.example.meuappfirebase
 
+import android.app.Application
 import android.util.Log
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.apol.myapplication.data.model.Habito
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
-class HabitosViewModel : ViewModel() {
+class HabitosViewModel(application: Application) : AndroidViewModel(application) {
 
     private val firestore = Firebase.firestore
     private val auth = Firebase.auth
@@ -23,11 +28,14 @@ class HabitosViewModel : ViewModel() {
     private val _mostrandoHabitosBons = MutableStateFlow(true)
     val mostrandoHabitosBons = _mostrandoHabitosBons.asStateFlow()
 
-    // ALTERADO: Agora é uma String anulável, em vez de um Evento.
     private val _operationStatus = MutableStateFlow<String?>(null)
     val operationStatus = _operationStatus.asStateFlow()
 
     private var allHabitsCache = listOf<HabitUI>()
+
+    private val reminderScheduler = HabitReminderScheduler(application)
+    private val _permissionEvent = MutableSharedFlow<Unit>()
+    val permissionEvent = _permissionEvent.asSharedFlow()
 
     init {
         carregarHabitosEmTempoReal()
@@ -44,7 +52,7 @@ class HabitosViewModel : ViewModel() {
             .addSnapshotListener { snapshots, error ->
                 if (error != null) {
                     Log.w("HabitosViewModel", "Erro ao ouvir as mudanças nos hábitos.", error)
-                    _operationStatus.value = "Erro ao carregar hábitos." // ALTERADO
+                    _operationStatus.value = "Erro ao carregar hábitos."
                     return@addSnapshotListener
                 }
 
@@ -58,13 +66,6 @@ class HabitosViewModel : ViewModel() {
 
     private fun filtrarHabitos() {
         _habitsList.value = allHabitsCache.filter { it.isGoodHabit == _mostrandoHabitosBons.value }
-    }
-
-    fun setTipoHabito(isBons: Boolean) {
-        if (_mostrandoHabitosBons.value != isBons) {
-            _mostrandoHabitosBons.value = isBons
-            filtrarHabitos()
-        }
     }
 
     fun toggleTipoHabito() {
@@ -84,10 +85,13 @@ class HabitosViewModel : ViewModel() {
             "progresso" to emptyList<String>()
         )
         firestore.collection("habitos").add(novoHabito)
-            .addOnSuccessListener { _operationStatus.value = "Hábito '$nome' criado!" } // ALTERADO
+            .addOnSuccessListener {
+                _operationStatus.value = "Hábito '$nome' criado!"
+                tryToScheduleHabitReminders()
+            }
             .addOnFailureListener { e ->
                 Log.e("HabitosViewModel", "Erro ao adicionar hábito", e)
-                _operationStatus.value = "Erro ao criar hábito." // ALTERADO
+                _operationStatus.value = "Erro ao criar hábito."
             }
     }
 
@@ -106,26 +110,22 @@ class HabitosViewModel : ViewModel() {
             transaction.update(docRef, "progresso", progresso)
         }.addOnFailureListener { e ->
             Log.e("HabitosViewModel", "Erro ao marcar hábito", e)
-            _operationStatus.value = "Não foi possível atualizar o hábito." // ALTERADO
+            _operationStatus.value = "Não foi possível atualizar o hábito."
         }
     }
 
     fun toggleFavorito(habit: HabitUI) {
-        // Verifica se já atingiu o limite de 3 favoritos
         if (!habit.isFavorited) {
             val totalFavoritos = allHabitsCache.count { it.isFavorited }
             if (totalFavoritos >= 3) {
                 _operationStatus.value = "Você pode favoritar no máximo 3 hábitos."
-                return // Para a execução aqui
+                return
             }
         }
 
-        // Se não atingiu o limite, ou se está desfavoritando,
-        // ele manda o comando para o Firestore.
         firestore.collection("habitos").document(habit.id)
-            .update("isFavorito", !habit.isFavorited) // A mágica está aqui!
+            .update("isFavorito", !habit.isFavorited)
             .addOnFailureListener { e ->
-                // Se der erro, avisa no Logcat. É bom ficar de olho aqui!
                 Log.e("HabitosViewModel", "Erro ao favoritar hábito", e)
                 _operationStatus.value = "Erro ao favoritar o hábito."
             }
@@ -137,8 +137,11 @@ class HabitosViewModel : ViewModel() {
             batch.delete(firestore.collection("habitos").document(habit.id))
         }
         batch.commit()
-            .addOnSuccessListener { _operationStatus.value = "${habitosParaApagar.size} hábito(s) apagado(s)." } // ALTERADO
-            .addOnFailureListener { _operationStatus.value = "Erro ao apagar hábitos." } // ALTERADO
+            .addOnSuccessListener {
+                _operationStatus.value = "${habitosParaApagar.size} hábito(s) apagado(s)."
+                tryToScheduleHabitReminders()
+            }
+            .addOnFailureListener { _operationStatus.value = "Erro ao apagar hábitos." }
     }
 
     fun updateHabit(habitId: String, newName: String, newDays: Set<String>) {
@@ -147,15 +150,39 @@ class HabitosViewModel : ViewModel() {
             "diasProgramados" to newDays.toList()
         )
         firestore.collection("habitos").document(habitId).update(updateData)
-            .addOnSuccessListener { _operationStatus.value = "Hábito atualizado!" } // ALTERADO
-            .addOnFailureListener { _operationStatus.value = "Erro ao atualizar o hábito." } // ALTERADO
+            .addOnSuccessListener {
+                _operationStatus.value = "Hábito atualizado!"
+                tryToScheduleHabitReminders()
+            }
+            .addOnFailureListener { _operationStatus.value = "Erro ao atualizar o hábito." }
     }
 
-    /**
-     * NOVA FUNÇÃO: Limpa a mensagem de status para que o Toast não apareça novamente.
-     */
     fun clearOperationStatus() {
         _operationStatus.value = null
+    }
+
+    fun tryToScheduleHabitReminders() {
+        if (usuarioLogadoId == null) return
+        viewModelScope.launch {
+            if (!reminderScheduler.canScheduleExactAlarms()) {
+                _permissionEvent.emit(Unit)
+                Log.d("HabitReminders", "Permissão de alarme exato não concedida. Solicitando...")
+                return@launch
+            }
+
+            firestore.collection("habitos")
+                .whereEqualTo("userOwnerId", usuarioLogadoId)
+                .get()
+                .addOnSuccessListener { snapshots ->
+                    val habitsForScheduling = snapshots.toObjects(Habito::class.java)
+                    reminderScheduler.cancelAllReminders(habitsForScheduling)
+                    reminderScheduler.scheduleAllHabitReminders(habitsForScheduling)
+                    Log.d("HabitReminders", "${habitsForScheduling.size} hábitos foram re-agendados.")
+                }
+                .addOnFailureListener { e ->
+                    Log.e("HabitReminders", "Erro ao buscar hábitos para agendamento.", e)
+                }
+        }
     }
 
     private fun getHojeString(): String = SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(Date())
@@ -179,6 +206,7 @@ class HabitosViewModel : ViewModel() {
     private fun com.google.firebase.firestore.DocumentSnapshot.toHabitUI(): HabitUI? {
         return try {
             val nome = getString("nome") ?: return null
+            val userOwnerId = getString("userOwnerId") ?: "" // Pega o ID do dono
             val progresso = get("progresso") as? List<String> ?: emptyList()
             val concluidoHoje = progresso.contains(getHojeString())
             val streak = calcularSequencia(progresso)
@@ -197,7 +225,8 @@ class HabitosViewModel : ViewModel() {
                 },
                 count = if (concluidoHoje) 1 else 0,
                 isFavorited = getBoolean("isFavorito") ?: false,
-                isGoodHabit = getBoolean("isGoodHabit") ?: true
+                isGoodHabit = getBoolean("isGoodHabit") ?: true,
+                userOwnerId = userOwnerId // Passa o valor para o construtor
             )
         } catch (e: Exception) {
             Log.e("HabitosViewModel", "Erro ao converter documento ${this.id} para HabitUI", e)
