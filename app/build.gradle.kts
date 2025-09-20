@@ -1,9 +1,14 @@
+import org.gradle.kotlin.dsl.java
+import java.util.Properties
+import java.io.FileInputStream
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.google.gms.google.services)
     alias(libs.plugins.kotlin.serialization)
-    id("kotlin-kapt") // Plugin para o Room
+    id("kotlin-kapt")
+
 }
 
 android {
@@ -17,8 +22,6 @@ android {
         versionCode = 1
         versionName = "1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-
-        // se precisar por causa de muitas dependências
         multiDexEnabled = true
     }
 
@@ -33,7 +36,6 @@ android {
     }
 
     compileOptions {
-        // manter Java 11 se você for usar libs que pedem J11 (ok se não usar google-cloud SDK)
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
@@ -43,6 +45,7 @@ android {
 
     buildFeatures {
         viewBinding = true
+        buildConfig = true // <-- ADICIONADO 1: Habilita o BuildConfig
     }
 
     packaging {
@@ -59,6 +62,7 @@ dependencies {
     implementation(libs.androidx.constraintlayout)
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
     implementation(libs.androidx.activity.ktx)
+    implementation(libs.androidx.lifecycle.livedata.ktx)
 
     // --- Firebase (BOM garante compatibilidade entre as libs Firebase) ---
     implementation(platform(libs.firebase.bom))
@@ -66,6 +70,9 @@ dependencies {
     implementation(libs.firebase.firestore.ktx)
     implementation(libs.firebase.storage.ktx)
     implementation(libs.firebase.appcheck.debug)
+
+    // --- IA do Google (Gemini) ---
+    implementation(libs.google.ai.generativeai) // <-- ADICIONADO 2: A dependência correta
 
     // --- Room ---
     implementation(libs.room.runtime)
@@ -86,14 +93,13 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
-    implementation(libs.androidx.lifecycle.livedata.ktx)
 
     // --- Multidex (se multiDexEnabled = true) ---
     implementation(libs.androidx.multidex)
+}
 
-    // --- OBS: removidas dependências google-cloud-vertexai e grpc-okhttp (não usar no Android) ---
-    // implementation("com.google.cloud:google-cloud-vertexai:0.1.0")
-    // implementation("io.grpc:grpc-okhttp:1.60.1")
-
-    // **Importante**: NÃO forçar exclusões globais de protobuf aqui — deixe o BOM/Gradle resolver as versões compatíveis.
+// <-- ADICIONADO 3: Bloco para ler a API Key do arquivo local.properties
+Properties().apply {
+    load(FileInputStream(rootProject.file("local.properties")))
+    android.defaultConfig.buildConfigField("String", "GEMINI_API_KEY", "\"${getProperty("GEMINI_API_KEY")}\"")
 }

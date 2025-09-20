@@ -20,6 +20,7 @@ googleGmsGoogleServices = "4.4.2"
 lifecycleLivedataKtx = "2.8.3"
 adapters = "3.2.0-alpha11"
 multidex = "2.0.1"
+google-ai-generativeai = "0.5.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -53,6 +54,7 @@ androidx-lifecycle-livedata-ktx = { group = "androidx.lifecycle", name = "lifecy
 androidx-adapters = { group = "androidx.databinding", name = "adapters", version.ref = "adapters" }
 
 androidx-multidex = { group = "androidx.multidex", name = "multidex", version.ref = "multidex" }
+google-ai-generativeai = { group = "com.google.ai.client.generativeai", name = "generativeai", version.ref = "google-ai-generativeai" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

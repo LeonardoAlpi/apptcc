@@ -6,9 +6,6 @@ import android.view.LayoutInflater
 import android.view.View
 import android.widget.Button
 import android.widget.CheckBox
-import android.widget.ImageButton
-import android.widget.ImageView
-import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
@@ -48,8 +45,6 @@ class SugestaoUser : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        // A Activity agora só precisa dar a ordem para o ViewModel carregar.
-        // O ViewModel se encarrega de buscar os dados da IA e do estado diário.
         viewModel.loadSuggestions()
     }
 
@@ -76,31 +71,27 @@ class SugestaoUser : AppCompatActivity() {
             cardView?.let {
                 it.visibility = if (state.isVisible) View.VISIBLE else View.GONE
                 if (state.isVisible) {
-                    // Aqui usamos o binding do card_sugestao.xml
                     val cardBinding = CardSugestaoBinding.bind(it)
 
                     cardBinding.iconeSugestao.setImageResource(state.iconResId)
                     cardBinding.tituloCardSugestao.text = state.title
-                    cardBinding.textoSugestao.text = state.suggestionTitle // O título principal da sugestão
+                    cardBinding.textoSugestao.text = state.suggestionTitle
 
                     if (state.isCompleted) {
                         it.alpha = 0.6f
                         cardBinding.btnConcluirSugestao.visibility = View.GONE
-                        cardBinding.btnProximaSugestao.visibility = View.GONE
                         cardBinding.textoSugestao.setOnClickListener {
                             Toast.makeText(this, "Você já concluiu esta sugestão hoje!", Toast.LENGTH_SHORT).show()
                         }
                     } else {
                         it.alpha = 1.0f
                         cardBinding.btnConcluirSugestao.visibility = View.VISIBLE
-                        // O botão de próxima sugestão não faz mais sentido com a IA, vamos escondê-lo.
                         cardBinding.btnProximaSugestao.visibility = View.GONE
 
-                        // Ao clicar no texto, mostra a descrição completa
                         cardBinding.textoSugestao.setOnClickListener {
                             AlertDialog.Builder(this)
                                 .setTitle(state.suggestionTitle)
-                                .setMessage(state.suggestionDescription) // Mostra a descrição com os passos
+                                .setMessage(state.suggestionDescription)
                                 .setPositiveButton("OK", null)
                                 .show()
                         }
@@ -124,13 +115,16 @@ class SugestaoUser : AppCompatActivity() {
         val checkExercicios = dialogView.findViewById<CheckBox>(R.id.check_add_exercicios)
         val btnConfirmar = dialogView.findViewById<Button>(R.id.btn_confirmar_add_sugestao)
 
+        // --- A CORREÇÃO ESTÁ AQUI ---
         val allCheckBoxes = mapOf(
-            "Respiração Guiada" to checkRespiracao, "Prática de Meditação" to checkMeditacao,
-            "Podcast Sugerido" to checkPodcasts, "Exercício Mental" to checkExercicios,
-            "Dica de Dieta" to checkDietas, "Livro do Mês" to checkLivros
+            "Respiração Guiada" to checkRespiracao,
+            "Prática de Meditação" to checkMeditacao,
+            "Podcast Sugerido" to checkPodcasts,
+            "Exercício Mental" to checkExercicios,
+            "Dica de Dieta" to checkDietas,
+            "Livro Sugerido" to checkLivros // Alterado de "Livro do Mês"
         )
 
-        // Preenche os checkboxes com base no estado atual
         val currentInterests = currentCardStates.filter { it.isVisible }.map { it.title }.toSet()
         allCheckBoxes.forEach { (interest, checkbox) ->
             checkbox.isChecked = currentInterests.contains(interest)

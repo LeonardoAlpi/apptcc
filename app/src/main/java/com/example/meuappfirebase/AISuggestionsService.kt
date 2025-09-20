@@ -1,74 +1,100 @@
 package com.example.meuappfirebase.ia
 
-import com.example.meuappfirebase.Sugestao
+import android.util.Log
 import com.apol.myapplication.data.model.User
+import com.example.meuappfirebase.BuildConfig
+import com.example.meuappfirebase.Sugestao
+import com.google.ai.client.generativeai.GenerativeModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-
+import org.json.JSONArray
+import org.json.JSONObject
 
 class AISuggestionsService {
 
-    /**
-     * Esta função agora apenas GERA as sugestões e retorna uma lista.
-     * Ela NÃO salva mais nada no Firestore.
-     * Ela é uma função 'suspend' para que possa ser chamada de dentro de uma coroutine.
-     */
-    suspend fun generateSuggestions(userProfile: User?): List<Sugestao> {
-        val userInterests = userProfile?.sugestoesInteresse?.joinToString(", ") ?: "bem-estar, saúde mental"
-        val prompt = "Gere 5 sugestões de bem-estar para uma pessoa com interesse em $userInterests. Inclua 'categoria', 'titulo', 'descricao' e 'passos'."
+    private val generativeModel = GenerativeModel(
+        modelName = "gemini-1.5-flash-latest",
+        apiKey = BuildConfig.GEMINI_API_KEY
+    )
 
-        // Esta operação de rede deve ser feita em um thread de I/O.
+    suspend fun generateSuggestions(userProfile: User?): List<Sugestao> {
+        val userInterests = userProfile?.sugestoesInteresse?.joinToString(", ") ?: "bem-estar geral"
+        val userBadHabits = userProfile?.habitosNegativos?.joinToString(", ") ?: "nenhum em específico"
+
+        val prompt = """
+            Você é um assistente de bem-estar. Baseado no perfil de um usuário, gere 5 sugestões personalizadas e criativas.
+            O usuário tem interesse em: "$userInterests".
+            Os hábitos que ele quer mudar são: "$userBadHabits".
+
+            Formate sua resposta EXATAMENTE como um array JSON, sem nenhum texto adicional antes ou depois.
+            Cada objeto no array deve ter as seguintes chaves: "categoria", "titulo", "descricao", e "passos" (que é um array de strings).
+            As categorias válidas são: LEITURA, DIETA, MEDITACAO, RESPIRACAO, PODCASTS, SAUDE_MENTAL_ANSIEDADE, SAUDE_MENTAL_DEPRESSAO, SAUDE_MENTAL_ESTRESSE, SAUDE_MENTAL_MOTIVACAO.
+        """.trimIndent()
+
         return withContext(Dispatchers.IO) {
-            // SUBSTITUA ESTA LÓGICA PELO SEU CÓDIGO DA API DO GOOGLE CLOUD
-            // Por enquanto, usaremos uma lista de sugestões fixa.
-            // Quando a API do Google Cloud retornar os dados, você deve processá-los
-            // e retorná-los neste formato.
-            return@withContext getMockSuggestions()
+            try {
+                Log.d("AIService", "Enviando prompt para a IA...")
+                val response = generativeModel.generateContent(prompt)
+                val responseText = response.text ?: ""
+                Log.d("AIService", "Resposta da IA: $responseText")
+
+                val suggestionsFromAI = parseJsonToSugestoes(responseText)
+
+                // --- LÓGICA DE GARANTIA DE SUGESTÃO DE LIVRO ---
+                val userWantsBook = userProfile?.temHabitoLeitura == true
+                val aiGaveBook = suggestionsFromAI.any { it.categoria == "LEITURA" }
+
+                if (userWantsBook && !aiGaveBook) {
+                    // Se o usuário quer um livro e a IA não deu, adicionamos um padrão.
+                    val defaultBookSuggestion = Sugestao(
+                        categoria = "LEITURA",
+                        titulo = "Sugestão Bônus de Leitura",
+                        descricao = "Explorar novos livros pode abrir sua mente. Que tal começar com 'O Poder do Hábito' de Charles Duhigg?",
+                        passos = listOf("Encontre um resumo online.", "Leia as primeiras 10 páginas.", "Veja se o tema te interessa.")
+                    )
+                    // Retorna a lista da IA + a nossa sugestão garantida
+                    return@withContext suggestionsFromAI + defaultBookSuggestion
+                } else {
+                    // Se não, apenas retorna a lista original da IA
+                    return@withContext suggestionsFromAI
+                }
+
+            } catch (e: Exception) {
+                Log.e("AIService", "Erro ao chamar a API da IA", e)
+                emptyList() // Retorna uma lista vazia em caso de erro
+            }
         }
     }
 
-    /**
-     * Mock de sugestões. Substitua esta função pela chamada à API do Google Cloud.
-     * O formato da resposta deve ser o mesmo.
-     */
-    private fun getMockSuggestions(): List<Sugestao> {
-        return listOf(
-            Sugestao(
-                categoria = "LEITURA",
-                titulo = "O Poder do Hábito",
-                descricao = "Entenda a ciência por trás de como os hábitos se formam e como mudá-los.",
-                passos = listOf("Leia o Capítulo 1", "Anote suas principais percepções.")
-            ),
-            Sugestao(
-                categoria = "DIETA",
-                titulo = "Smoothie Energético Matinal",
-                descricao = "Uma receita simples e rápida para começar o dia com energia.",
-                passos = listOf("1 banana", "200ml de leite vegetal", "1 colher de chia.")
-            ),
-            Sugestao(
-                categoria = "MEDITACAO",
-                titulo = "Meditação Guiada de 10 Minutos",
-                descricao = "Foco na respiração e relaxamento para começar o dia com calma.",
-                passos = listOf("Encontre um lugar tranquilo", "Sente-se confortavelmente", "Feche os olhos e respire profundamente por 10 minutos")
-            ),
-            Sugestao(
-                categoria = "SAUDE_MENTAL_ESTRESSE",
-                titulo = "Jornal do Agradecimento",
-                descricao = "Passe 5 minutos escrevendo sobre 3 coisas pelas quais você é grato hoje.",
-                passos = listOf("Pegue um caderno", "Anote 3 coisas", "Reflita sobre elas")
-            ),
-            Sugestao(
-                categoria = "RESPIRACAO",
-                titulo = "Técnica da Respiração Quadrada",
-                descricao = "Uma técnica simples para acalmar o sistema nervoso em momentos de estresse.",
-                passos = listOf("Inspire por 4s", "Segure por 4s", "Expire por 4s", "Segure por 4s. Repita 5 vezes.")
-            ),
-            Sugestao(
-                categoria = "PODCASTS",
-                titulo = "Podcast: Eslen Delanogare",
-                descricao = "Um podcast com temas sobre saúde mental e autoconhecimento.",
-                passos = listOf("Ouça o episódio 'O que é a vida?'", "Pense em sua experiência com o episódio")
-            )
-        )
+    private fun parseJsonToSugestoes(jsonString: String): List<Sugestao> {
+        val suggestions = mutableListOf<Sugestao>()
+        try {
+            val cleanedJson = jsonString
+                .replace("```json", "")
+                .replace("```", "")
+                .trim()
+
+            val jsonArray = JSONArray(cleanedJson)
+            for (i in 0 until jsonArray.length()) {
+                val jsonObj = jsonArray.getJSONObject(i)
+                val passosJson = jsonObj.getJSONArray("passos")
+                val passosList = mutableListOf<String>()
+                for (j in 0 until passosJson.length()) {
+                    passosList.add(passosJson.getString(j))
+                }
+
+                suggestions.add(
+                    Sugestao(
+                        categoria = jsonObj.getString("categoria"),
+                        titulo = jsonObj.getString("titulo"),
+                        descricao = jsonObj.getString("descricao"),
+                        passos = passosList
+                    )
+                )
+            }
+        } catch (e: Exception) {
+            Log.e("AIService", "Erro ao interpretar o JSON da IA", e)
+        }
+        return suggestions
     }
 }
