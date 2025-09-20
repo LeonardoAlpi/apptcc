@@ -21,7 +21,7 @@ class ActivityProgressoHabito : AppCompatActivity() {
         // Agora ele espera uma String com a chave "habit_id_string"
         val habitId = intent.getStringExtra("habit_id_string")
 
-        // Se o ID for nulo ou vazio, o hábito é inválido, então fechamos a tela
+        // Se o ID for nulo ou vazio, o hábito é inválido, então fechamos a tela a
         if (habitId.isNullOrEmpty()) {
             Toast.makeText(this, "Erro: Hábito não encontrado.", Toast.LENGTH_SHORT).show()
             finish()
