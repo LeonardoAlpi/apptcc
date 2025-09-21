@@ -176,11 +176,14 @@ class Bemvindouser : AppCompatActivity() {
             }
         }
 
+        // --- MUDANÇA AQUI ---
         binding.widgetHabitos.root.findViewById<View>(R.id.btnNovoHabito).setOnClickListener {
             val intent = Intent(this, HabitosActivity::class.java)
-            intent.putExtra("abrir_dialogo_novo_habito", true)
+            // Adicionamos um "extra" para sinalizar a ação desejada
+            intent.putExtra("ABRIR_DIALOGO_NOVO_HABITO", true)
             startActivity(intent)
         }
+        // --- FIM DA MUDANÇA ---
 
         binding.widgetBlocos.root.findViewById<View>(R.id.btnNovoBloco).setOnClickListener {
             val intent = Intent(this, anotacoes::class.java)

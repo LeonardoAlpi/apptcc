@@ -58,6 +58,12 @@ class HabitosActivity : AppCompatActivity() {
 
         pedirPermissaoDeNotificacao()
         viewModel.tryToScheduleHabitReminders()
+
+        val abrirDialogo = intent.getBooleanExtra("ABRIR_DIALOGO_NOVO_HABITO", false)
+        if (abrirDialogo) {
+            // Se sim, chama a função para mostrar o diálogo
+            mostrarDialogoNovoHabito()
+        }
     }
 
     private fun pedirPermissaoDeNotificacao() {

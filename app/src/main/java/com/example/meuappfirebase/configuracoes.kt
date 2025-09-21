@@ -182,6 +182,6 @@ class configuracoes : AppCompatActivity() {
         navBar.botaoHabitos.setOnClickListener { startActivity(Intent(this, HabitosActivity::class.java)) }
         navBar.botaoTreinos.setOnClickListener { startActivity(Intent(this, treinos::class.java)) }
         navBar.botaoCronometro.setOnClickListener { startActivity(Intent(this, CronometroActivity::class.java)) }
-        navBar.botaoSugestoes.setOnClickListener { /* lógica sugestões */ }
+        navBar.botaoSugestoes.setOnClickListener { startActivity(Intent(this, SugestaoUser::class.java)) }
     }
 }
