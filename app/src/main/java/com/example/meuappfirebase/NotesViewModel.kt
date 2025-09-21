@@ -6,6 +6,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -29,14 +30,12 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
     private val notesDao = AppDatabase.getDatabase(application).notesDao()
     private val alarmManager = application.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
-    // LiveData para as listas que a UI vai observar
     private val _notes = MutableLiveData<List<Note>>()
     val notes: LiveData<List<Note>> = _notes
 
     private val _blocos = MutableLiveData<List<Bloco>>()
     val blocos: LiveData<List<Bloco>> = _blocos
 
-    // LiveData para mensagens de status
     private val _statusMessage = MutableLiveData<Event<String>>()
     val statusMessage: LiveData<Event<String>> = _statusMessage
 
@@ -49,12 +48,26 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             notesDao.getNotesByUser(user.uid).collect { _notes.postValue(it) }
         }
-        viewModelScope.launch {
-            notesDao.getBlocosByUser(user.uid).collect { _blocos.postValue(it) }
-        }
-    }
 
-    // --- Métodos de Modificação (CRUD) ---
+        // Listener em tempo real para os blocos direto do Firestore
+        firestore.collection("usuarios").document(user.uid).collection("blocos")
+            .addSnapshotListener { snapshots, error ->
+                if (error != null) {
+                    _statusMessage.postValue(Event("Erro ao carregar blocos."))
+                    return@addSnapshotListener
+                }
+                // Mapeia os documentos, garantindo que o ID do Firestore seja atribuído
+                val blocosList = snapshots?.documents?.mapNotNull { doc ->
+                    doc.toObject(Bloco::class.java)?.copy(id = doc.id)
+                } ?: emptyList()
+
+                _blocos.postValue(blocosList)
+                // Sincroniza a lista com o banco de dados local (Room)
+                viewModelScope.launch {
+                    notesDao.syncBlocos(user.uid, blocosList)
+                }
+            }
+    }
 
     fun addNote(text: String) {
         val user = auth.currentUser ?: return
@@ -67,69 +80,71 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
 
     fun deleteNotes(notes: List<Note>) = viewModelScope.launch { notesDao.deleteNotes(notes) }
 
+    // --- FUNÇÃO addBloco CORRIGIDA ---
     fun addBloco(nome: String) {
         val user = auth.currentUser ?: return
-        viewModelScope.launch {
-            val novoBloco = Bloco(userOwnerId = user.uid, nome = nome)
-            notesDao.insertBloco(novoBloco)
-            firestore.collection("users").document(user.uid).collection("blocos")
-                .document(novoBloco.id).set(novoBloco)
-        }
+        // O Bloco já é criado com um ID único (UUID)
+        val novoBloco = Bloco(userOwnerId = user.uid, nome = nome)
+
+        // Usamos .document(ID).set(OBJETO) para forçar o Firestore a usar nosso ID
+        firestore.collection("usuarios").document(user.uid).collection("blocos")
+            .document(novoBloco.id) // << Usa o ID gerado no app
+            .set(novoBloco)         // << Salva o objeto inteiro
+            .addOnSuccessListener {
+                Log.d("NotesViewModel", "Bloco criado com sucesso no Firestore com ID: ${novoBloco.id}")
+                // O listener em tempo real já vai atualizar a lista na UI e no Room.
+            }
+            .addOnFailureListener { e ->
+                _statusMessage.value = Event("Erro ao criar bloco: ${e.message}")
+            }
     }
 
     fun updateBloco(bloco: Bloco) {
         val user = auth.currentUser ?: return
-        viewModelScope.launch {
-            notesDao.updateBloco(bloco)
-            firestore.collection("users").document(user.uid).collection("blocos")
-                .document(bloco.id).set(bloco)
-
-            // Ao atualizar, cancelamos os antigos e reagendamos se necessário
-            cancelarLembretesParaBloco(bloco)
-            if (bloco.tipoLembrete != TipoLembrete.NENHUM) {
-                agendarLembretesParaBloco(bloco)
+        firestore.collection("usuarios").document(user.uid).collection("blocos")
+            .document(bloco.id).set(bloco) // .set() também funciona para atualizar/sobrescrever
+            .addOnSuccessListener {
+                // O listener em tempo real já vai atualizar o Room.
+                cancelarLembretesParaBloco(bloco)
+                if (bloco.tipoLembrete != TipoLembrete.NENHUM) {
+                    agendarLembretesParaBloco(bloco)
+                }
             }
-        }
     }
 
     fun deleteBlocos(blocos: List<Bloco>) {
         val user = auth.currentUser ?: return
-        viewModelScope.launch {
-            blocos.forEach { bloco ->
-                // PONTO CRÍTICO: Cancela os alarmes ANTES de deletar o bloco do banco
-                cancelarLembretesParaBloco(bloco)
-                firestore.collection("users").document(user.uid).collection("blocos")
-                    .document(bloco.id).delete()
-            }
-            notesDao.deleteBlocos(blocos)
+        val batch = firestore.batch()
+        blocos.forEach { bloco ->
+            cancelarLembretesParaBloco(bloco)
+            val docRef = firestore.collection("usuarios").document(user.uid).collection("blocos").document(bloco.id)
+            batch.delete(docRef)
         }
+        batch.commit() // O listener em tempo real vai remover do Room.
     }
 
     fun toggleFavoritoBloco(bloco: Bloco) {
         val userId = auth.currentUser?.uid ?: return
         val blocosAtuais = _blocos.value ?: return
-        val favoritosAtuais = blocosAtuais.count { it.isFavorito }
+        val favoritosAtuais = blocosAtuais.count { it.favorito }
 
-        if (!bloco.isFavorito && favoritosAtuais >= 3) {
+        if (!bloco.favorito && favoritosAtuais >= 3) {
             _statusMessage.value = Event("Você só pode favoritar até 3 blocos.")
             return
         }
 
-        val blocoAtualizado = bloco.copy(isFavorito = !bloco.isFavorito)
-        viewModelScope.launch {
-            notesDao.updateBloco(blocoAtualizado)
-            firestore.collection("users").document(userId).collection("blocos")
-                .document(bloco.id)
-                .update("isFavorito", blocoAtualizado.isFavorito) // Garanta que o nome do campo no Firestore está correto
-                .addOnFailureListener {
-                    _statusMessage.value = Event("Erro ao sincronizar favorito.")
-                    viewModelScope.launch { notesDao.updateBloco(bloco) }
-                }
-        }
+        val novoStatus = !bloco.favorito
+
+        firestore.collection("usuarios").document(userId).collection("blocos")
+            .document(bloco.id)
+            .update("favorito", novoStatus) // Atualiza apenas o campo 'favorito'
+            .addOnFailureListener { e ->
+                _statusMessage.value = Event("Erro ao sincronizar favorito: ${e.message}")
+            }
     }
 
-    // --- LÓGICA DE ALARME E NOTIFICAÇÃO (COM A CORREÇÃO) ---
-
+    // --- LÓGICA DE ALARME E NOTIFICAÇÃO ---
+    // (O resto do seu código de alarmes continua aqui, sem alterações)
     private fun agendarLembretesParaBloco(bloco: Bloco) {
         val context = getApplication<Application>().applicationContext
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !alarmManager.canScheduleExactAlarms()) {
@@ -166,7 +181,6 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun cancelarLembretesParaBloco(bloco: Bloco) {
         val context = getApplication<Application>().applicationContext
-        // Tenta cancelar um número razoável de possíveis alarmes que podem ter sido agendados
         for (i in 0 until 50) {
             val requestCode = bloco.id.hashCode() + i
             val pendingIntent = getPendingIntent(context, bloco, requestCode)
@@ -174,28 +188,20 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    /**
-     * CORRIGIDO: Cria um PendingIntent que é idêntico para agendamento e cancelamento.
-     */
     private fun getPendingIntent(context: Context, bloco: Bloco, requestCode: Int): PendingIntent {
-        // O Intent DEVE ser construído sempre da mesma forma, com os mesmos extras.
         val intent = Intent(context, BlocoNotificationReceiver::class.java).apply {
             putExtra("titulo", bloco.nome + if (bloco.subtitulo.isNotEmpty()) " - ${bloco.subtitulo}" else "")
             putExtra("mensagem", bloco.mensagemNotificacao.ifEmpty { "Você tem um lembrete para este bloco." })
             putExtra("bloco_id", bloco.id)
         }
-
-        // As flags garantem compatibilidade e segurança
         val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         } else {
             PendingIntent.FLAG_UPDATE_CURRENT
         }
-
         return PendingIntent.getBroadcast(context, requestCode, intent, flags)
     }
 
-    // --- Funções Auxiliares ---
     private fun parseHorario(horarioStr: String): Pair<Int, Int>? {
         val parts = horarioStr.split(":").mapNotNull { it.toIntOrNull() }
         return if (parts.size == 2) parts[0] to parts[1] else null

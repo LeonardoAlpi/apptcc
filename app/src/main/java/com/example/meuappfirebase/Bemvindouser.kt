@@ -7,7 +7,6 @@ import android.graphics.drawable.Drawable
 import android.os.Bundle
 import android.view.View
 import android.widget.ImageView
-import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.viewModels
@@ -15,7 +14,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.isVisible
 import com.apol.myapplication.data.model.Bloco
 import com.apol.myapplication.data.model.Habito
-import com.apol.myapplication.data.model.User // Importe a classe User
+import com.apol.myapplication.data.model.User
 import com.bumptech.glide.Glide
 import com.bumptech.glide.request.RequestOptions
 import com.example.meuappfirebase.databinding.ActivityBemvindouserBinding
@@ -50,17 +49,15 @@ class Bemvindouser : AppCompatActivity() {
     private fun observarViewModel() {
         viewModel.userProfile.observe(this) { user ->
             if (user != null) {
-                // CORRIGIDO: Usando o operador Elvis para fornecer um valor padrão se o nome for nulo
                 val nomeDoUsuario = user.nome ?: "Usuário"
                 val saudacao = if (user.genero.equals("Feminino", ignoreCase = true)) "Bem-vinda" else "Bem-vindo"
                 binding.welcomeText.text = "$saudacao, $nomeDoUsuario!"
 
-                // CORRIGIDO: Verificação segura para `user.nome` antes de usá-lo
                 if (!user.profilePicUri.isNullOrEmpty()) {
                     Glide.with(this).load(user.profilePicUri).apply(RequestOptions.circleCropTransform()).into(binding.ivProfilePicture)
                 } else {
                     val initials = nomeDoUsuario.split(" ").mapNotNull { it.firstOrNull()?.uppercase() }.take(2).joinToString("")
-                    val placeholder = InitialsDrawable(initials, getColor(R.color.roxo)) // Adapte a cor se necessário
+                    val placeholder = InitialsDrawable(initials, getColor(R.color.roxo))
                     binding.ivProfilePicture.setImageDrawable(placeholder)
                 }
             } else {
@@ -103,10 +100,10 @@ class Bemvindouser : AppCompatActivity() {
             if (habito != null) {
                 slotView.isVisible = true
 
-                // --- MUDANÇA PARA SEPARAR ID E NOME ---
-                val partes = habito.nome.split(";;;")
-                val habitId = partes[0]
-                val habitName = if (partes.size > 1) partes[1] else ""
+                // --- CORREÇÃO APLICADA AQUI ---
+                // Lendo os campos separados diretamente, sem usar .split()
+                val habitId = habito.firestoreId
+                val habitName = habito.nome
 
                 val emoji = extrairEmoji(habitName)
                 textView.text = removerEmoji(habitName)
@@ -114,13 +111,12 @@ class Bemvindouser : AppCompatActivity() {
                 if (emoji.isNotEmpty()) {
                     iconView.setImageDrawable(TextDrawable(this, emoji))
                 } else {
-                    iconView.setImageResource(R.drawable.ic_habits)
+                    iconView.setImageResource(R.drawable.ic_habits) // Ícone padrão
                 }
 
-                // --- MUDANÇA PRINCIPAL NO CLIQUE ---
                 slotView.setOnClickListener {
                     val intent = Intent(this, ActivityProgressoHabito::class.java)
-                    // Agora envia a CHAVE e o TIPO corretos que a tela de progresso espera
+                    // Agora envia o ID correto para a tela de progresso
                     intent.putExtra("habit_id_string", habitId)
                     startActivity(intent)
                 }
@@ -130,13 +126,13 @@ class Bemvindouser : AppCompatActivity() {
         }
     }
 
+
     private fun atualizarWidgetBlocos(blocosFavoritados: List<Bloco>) {
         val widgetBlocos = binding.widgetBlocos.root
         val emptyStateTextView = widgetBlocos.findViewById<TextView>(R.id.tv_empty_blocos_widget)
 
         emptyStateTextView.isVisible = blocosFavoritados.isEmpty()
 
-        // Lista dos slots do widget
         val slots = listOf(
             Triple(widgetBlocos.findViewById<View>(R.id.bloco_slot_1), widgetBlocos.findViewById<ImageView>(R.id.bloco_icon_1), widgetBlocos.findViewById<TextView>(R.id.bloco_text_1)),
             Triple(widgetBlocos.findViewById<View>(R.id.bloco_slot_2), widgetBlocos.findViewById<ImageView>(R.id.bloco_icon_2), widgetBlocos.findViewById<TextView>(R.id.bloco_text_2)),
@@ -150,13 +146,10 @@ class Bemvindouser : AppCompatActivity() {
             if (bloco != null) {
                 slotView.isVisible = true
                 textView.text = bloco.nome
-
-                // Aqui você pode definir um ícone específico se quiser, ou um padrão
                 iconView.setImageResource(R.drawable.ic_block)
 
                 slotView.setOnClickListener {
                     val intent = Intent(this, anotacoes::class.java).apply {
-                        // Abre a tela de anotações já no modo blocos e pode até abrir o bloco específico
                         putExtra("modo_blocos_ativo", true)
                         putExtra("abrir_bloco_id", bloco.id)
                     }
@@ -216,7 +209,6 @@ class Bemvindouser : AppCompatActivity() {
         navBar.botaoSugestoes.setOnClickListener { startActivity(Intent(this, SugestaoUser::class.java)) }
     }
 
-    // Suas funções helper de UI continuam aqui
     private fun extrairEmoji(texto: String): String {
         val regex = Regex("^\\p{So}")
         return regex.find(texto)?.value ?: ""
@@ -241,5 +233,38 @@ class Bemvindouser : AppCompatActivity() {
             override fun getOpacity(): Int = PixelFormat.TRANSLUCENT
             override fun setColorFilter(colorFilter: ColorFilter?) { paint.colorFilter = colorFilter }
         }
+    }
+
+    // A classe InitialsDrawable precisa ser definida, idealmente em seu próprio arquivo
+    // ou como uma classe interna aqui para o código compilar.
+    class InitialsDrawable(private val initials: String, private val color: Int) : Drawable() {
+        private val textPaint = Paint().apply {
+            isAntiAlias = true
+            typeface = Typeface.DEFAULT_BOLD
+            textAlign = Paint.Align.CENTER
+            color = Color.WHITE // Cor do texto
+        }
+        private val backgroundPaint = Paint().apply {
+            isAntiAlias = true
+            color = this@InitialsDrawable.color // Cor do círculo
+        }
+        override fun draw(canvas: Canvas) {
+            val bounds = bounds
+            val radius = bounds.width().coerceAtMost(bounds.height()) / 2f
+            canvas.drawCircle(bounds.exactCenterX(), bounds.exactCenterY(), radius, backgroundPaint)
+            textPaint.textSize = radius // Ajusta o tamanho do texto ao raio
+            val yPos = bounds.exactCenterY() - (textPaint.descent() + textPaint.ascent()) / 2
+            canvas.drawText(initials, bounds.exactCenterX(), yPos, textPaint)
+        }
+        override fun setAlpha(alpha: Int) {
+            textPaint.alpha = alpha
+            backgroundPaint.alpha = alpha
+        }
+        override fun setColorFilter(colorFilter: ColorFilter?) {
+            textPaint.colorFilter = colorFilter
+            backgroundPaint.colorFilter = colorFilter
+        }
+        @Deprecated("Deprecated in Java", ReplaceWith("PixelFormat.TRANSLUCENT", "android.graphics.PixelFormat"))
+        override fun getOpacity(): Int = PixelFormat.TRANSLUCENT
     }
 }
