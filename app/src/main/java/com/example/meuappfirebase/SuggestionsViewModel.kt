@@ -7,43 +7,23 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import com.apol.myapplication.AppDatabase
-import com.apol.myapplication.data.model.User // Importe o User do seu Room DB
+import com.apol.myapplication.data.model.User
 import com.example.meuappfirebase.ia.AISuggestionsService
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.SetOptions
 import com.google.firebase.firestore.ktx.firestore
-import com.google.firebase.firestore.ktx.toObjects
 import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
-
-// Data class para representar o estado de cada card na UI
-data class SuggestionCardState(
-    val key: String,
-    val isVisible: Boolean,
-    val iconResId: Int,
-    val title: String,
-    val suggestionTitle: String,
-    val suggestionDescription: String,
-    val isCompleted: Boolean
-)
-
-// Data class para receber os dados da IA do Firestore
-data class Sugestao(
-    val categoria: String = "",
-    val titulo: String = "",
-    val descricao: String = "",
-    val passos: List<String> = emptyList()
-)
 
 class SuggestionsViewModel(application: Application) : AndroidViewModel(application) {
 
     private val auth = Firebase.auth
     private val firestore = Firebase.firestore
     private val userDao = AppDatabase.getDatabase(application).userDao()
-    private val aiService = AISuggestionsService()
+    private val aiService = AISuggestionsService(application)
 
     private val _suggestionCards = MutableLiveData<List<SuggestionCardState>>()
     val suggestionCards: LiveData<List<SuggestionCardState>> = _suggestionCards
@@ -51,6 +31,7 @@ class SuggestionsViewModel(application: Application) : AndroidViewModel(applicat
     private val _statusMessage = MutableLiveData<Event<String>>()
     val statusMessage: LiveData<Event<String>> = _statusMessage
 
+    // ... (o seu cardConfig continua o mesmo)
     private val cardConfig = mapOf(
         "LEITURA" to Triple("livros", R.drawable.ic_book, "Livro Sugerido"),
         "DIETA" to Triple("dietas", R.drawable.ic_food, "Dica de Dieta"),
@@ -63,24 +44,20 @@ class SuggestionsViewModel(application: Application) : AndroidViewModel(applicat
         "SAUDE_MENTAL_MOTIVACAO" to Triple("exercicios", R.drawable.ic_brain, "Exercício Mental")
     )
 
-    fun loadSuggestions() {
-        val user = auth.currentUser ?: return
-        val hoje = SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(Date())
 
+    /**
+     * MUDANÇA: Gera novas sugestões e as salva. Chamada apenas em momentos estratégicos.
+     */
+    fun gerarEcarregarSugestoes() {
+        val user = auth.currentUser ?: return
+        _statusMessage.postValue(Event("Gerando novas sugestões personalizadas..."))
         viewModelScope.launch {
             val userProfile = userDao.getUserById(user.uid)
-
             try {
                 val sugestoesDaIA = aiService.generateSuggestions(userProfile)
-                saveSuggestionsToFirestore(user.uid, sugestoesDaIA)
-
-                firestore.collection("usuarios").document(user.uid)
-                    .collection("estadoSugestoes").document(hoje).get()
-                    .addOnSuccessListener { dailyStateDoc ->
-                        val concluidas = dailyStateDoc.get("concluidas") as? List<String> ?: emptyList()
-                        val userInterests = userProfile?.sugestoesInteresse
-                        buildUiStateFromAI(sugestoesDaIA, userInterests, concluidas)
-                    }
+                saveSuggestionsToFirestore(user.uid, sugestoesDaIA) {
+                    carregarSugestoesDoCache()
+                }
             } catch (e: Exception) {
                 _statusMessage.postValue(Event("Não foi possível gerar as sugestões com a IA."))
                 Log.e("SuggestionsViewModel", "Erro ao gerar sugestões da IA", e)
@@ -88,19 +65,43 @@ class SuggestionsViewModel(application: Application) : AndroidViewModel(applicat
         }
     }
 
-    private fun saveSuggestionsToFirestore(userId: String, suggestions: List<Sugestao>) {
+    /**
+     * MUDANÇA: Apenas lê os dados que já estão salvos no Firestore. É rápido e eficiente.
+     */
+    fun carregarSugestoesDoCache() {
+        val user = auth.currentUser ?: return
+        val hoje = SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(Date())
+
+        val sugestoesRef = firestore.collection("usuarios").document(user.uid).collection("sugestoesIA")
+        val estadoRef = firestore.collection("usuarios").document(user.uid).collection("estadoSugestoes").document(hoje)
+
+        sugestoesRef.get().addOnSuccessListener { sugestoesSnapshot ->
+            val sugestoesDaIA = sugestoesSnapshot.toObjects(Sugestao::class.java)
+
+            estadoRef.get().addOnSuccessListener { estadoSnapshot ->
+                val concluidas = estadoSnapshot.get("concluidas") as? List<String> ?: emptyList()
+                viewModelScope.launch {
+                    val userProfile = userDao.getUserById(user.uid)
+                    val userInterests = userProfile?.sugestoesInteresse
+                    buildUiStateFromAI(sugestoesDaIA, userInterests, concluidas)
+                }
+            }
+        }.addOnFailureListener {
+            _statusMessage.postValue(Event("Não foi possível carregar sugestões."))
+        }
+    }
+
+    private fun saveSuggestionsToFirestore(userId: String, suggestions: List<Sugestao>, onComplete: () -> Unit) {
         val batch = firestore.batch()
         val collectionRef = firestore.collection("usuarios").document(userId).collection("sugestoesIA")
 
         collectionRef.get().addOnSuccessListener { documents ->
-            for (doc in documents) {
-                batch.delete(doc.reference)
-            }
+            for (doc in documents) { batch.delete(doc.reference) }
             suggestions.forEach { sugestao ->
                 val newDocRef = collectionRef.document()
                 batch.set(newDocRef, sugestao)
             }
-            batch.commit()
+            batch.commit().addOnSuccessListener { onComplete() }
         }
     }
 
@@ -111,7 +112,6 @@ class SuggestionsViewModel(application: Application) : AndroidViewModel(applicat
     ) {
         val cards = sugestoesIA.mapNotNull { sugestao ->
             val config = cardConfig[sugestao.categoria] ?: return@mapNotNull null
-
             val descricaoCompleta = buildString {
                 append(sugestao.descricao)
                 if (sugestao.passos.isNotEmpty()) {
@@ -119,11 +119,9 @@ class SuggestionsViewModel(application: Application) : AndroidViewModel(applicat
                     sugestao.passos.forEach { passo -> append("• $passo\n") }
                 }
             }
-
             val isVisible = userInterests.isNullOrEmpty() || userInterests.any { interest ->
                 config.third.contains(interest, ignoreCase = true) || interest.contains(config.first, ignoreCase = true)
             }
-
             SuggestionCardState(
                 key = config.first,
                 isVisible = isVisible,
@@ -146,7 +144,7 @@ class SuggestionsViewModel(application: Application) : AndroidViewModel(applicat
         docRef.set(mapOf("lastUpdate" to FieldValue.serverTimestamp()), SetOptions.merge())
             .addOnSuccessListener {
                 docRef.update("concluidas", FieldValue.arrayUnion(suggestionTitle))
-                    .addOnSuccessListener { loadSuggestions() }
+                    .addOnSuccessListener { carregarSugestoesDoCache() } // Atualiza a UI
             }
     }
 
@@ -161,7 +159,7 @@ class SuggestionsViewModel(application: Application) : AndroidViewModel(applicat
             firestore.collection("usuarios").document(user.uid).update("sugestoesInteresse", newInterests)
                 .addOnSuccessListener {
                     _statusMessage.postValue(Event("Preferências salvas!"))
-                    loadSuggestions()
+                    carregarSugestoesDoCache() // Atualiza a UI
                 }
         }
     }

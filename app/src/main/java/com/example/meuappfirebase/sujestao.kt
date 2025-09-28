@@ -12,22 +12,23 @@ import kotlinx.coroutines.launch
 class sujestao : AppCompatActivity() {
 
     private lateinit var binding: ActivitySujestaoBinding
-    private val viewModel: AuthViewModel by viewModels()
+    // MUDANÇA: Adicionamos os dois ViewModels
+    private val authViewModel: AuthViewModel by viewModels()
+    private val suggestionsViewModel: SuggestionsViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivitySujestaoBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Verificação redundante em onCreate foi REMOVIDA.
-
         configurarCheckBoxes()
         configurarBotaoAvancar()
-        observarEstado() // <-- Adicionado para o fluxo correto
+        observarEstado() // MUDANÇA: Renomeado para observar ambos os ViewModels
     }
 
     private fun configurarBotaoAvancar() {
         binding.buttonavancarsujestao.setOnClickListener {
+            // ... (seu código para coletar os interesses selecionados) ...
             val interessesSelecionados = mutableListOf<String>()
             binding.apply {
                 if (checkBox5nenhumaatividade.isChecked) {
@@ -45,18 +46,23 @@ class sujestao : AppCompatActivity() {
                 return@setOnClickListener
             }
 
-            // <-- MUDANÇA PRINCIPAL
-            // Chama a nova função no ViewModel para salvar os dados e FINALIZAR o onboarding
-            viewModel.salvarDadosEtapa5(interessesSelecionados)
+            // A Activity apenas avisa o ViewModel para salvar, a navegação acontece no observer
+            authViewModel.salvarDadosEtapa5(interessesSelecionados)
         }
     }
 
     private fun observarEstado() {
-        // Observa o sucesso da atualização para navegar de volta ao Roteador
+        // Observa o AuthViewModel para saber quando o onboarding terminou
         lifecycleScope.launch {
-            viewModel.onboardingStepUpdated.collect { success ->
+            authViewModel.onboardingStepUpdated.collect { success ->
                 if (success) {
-                    Toast.makeText(this@sujestao, "Cadastro finalizado!", Toast.LENGTH_SHORT).show()
+                    authViewModel.resetOnboardingStepUpdated() // Limpa o evento
+
+                    // MUDANÇA: Quando o onboarding termina, mandamos a IA gerar as sugestões
+                    Toast.makeText(this@sujestao, "Preparando suas primeiras sugestões...", Toast.LENGTH_LONG).show()
+                    suggestionsViewModel.gerarEcarregarSugestoes()
+
+                    // E então navegamos para o Roteador
                     val intent = Intent(this@sujestao, RoteadorActivity::class.java)
                     startActivity(intent)
                     finish()
@@ -64,14 +70,17 @@ class sujestao : AppCompatActivity() {
             }
         }
 
-        // Observa possíveis erros
+        // Observa o SuggestionsViewModel por mensagens de status (erros, etc.)
         lifecycleScope.launch {
-            viewModel.uiState.collect { state ->
-                state.error?.let { Toast.makeText(this@sujestao, it, Toast.LENGTH_LONG).show() }
+            suggestionsViewModel.statusMessage.observe(this@sujestao) { event ->
+                event.getContentIfNotHandled()?.let { message ->
+                    Toast.makeText(this@sujestao, message, Toast.LENGTH_SHORT).show()
+                }
             }
         }
     }
 
+    // ... (sua função configurarCheckBoxes continua igual)
     private fun configurarCheckBoxes() {
         val checkBoxesAtividades = listOf(
             binding.checkBoxrespiracao,

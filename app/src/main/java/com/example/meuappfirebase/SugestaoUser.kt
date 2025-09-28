@@ -1,5 +1,6 @@
 package com.example.meuappfirebase
 
+// ... (seus imports continuam os mesmos) ...
 import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -13,11 +14,13 @@ import androidx.appcompat.app.AppCompatActivity
 import com.example.meuappfirebase.databinding.ActivitySugestaoUserBinding
 import com.example.meuappfirebase.databinding.CardSugestaoBinding
 
+
 class SugestaoUser : AppCompatActivity() {
 
     private lateinit var binding: ActivitySugestaoUserBinding
     private val viewModel: SuggestionsViewModel by viewModels()
 
+    // ... (suas outras propriedades continuam as mesmas) ...
     private lateinit var cardViews: Map<String, View>
     private var currentCardStates: List<SuggestionCardState> = emptyList()
 
@@ -45,16 +48,19 @@ class SugestaoUser : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        viewModel.loadSuggestions()
+        // MUDANÇA: Agora chama a função rápida que só lê o cache
+        viewModel.carregarSugestoesDoCache()
     }
 
+    // ... (o resto do seu código, como 'onBackPressed', 'observarViewModel', etc., continua igual)
     override fun onBackPressed() {
         finishAffinity()
     }
 
     private fun observarViewModel() {
         viewModel.suggestionCards.observe(this) { cardStates ->
-            if (cardStates.isNullOrEmpty()) return@observe
+            // Adicionada verificação para evitar crash se a lista for nula
+            if (cardStates == null) return@observe
             currentCardStates = cardStates
             atualizarTodosOsCards()
         }
@@ -80,6 +86,7 @@ class SugestaoUser : AppCompatActivity() {
                     if (state.isCompleted) {
                         it.alpha = 0.6f
                         cardBinding.btnConcluirSugestao.visibility = View.GONE
+                        cardBinding.btnProximaSugestao.visibility = View.GONE
                         cardBinding.textoSugestao.setOnClickListener {
                             Toast.makeText(this, "Você já concluiu esta sugestão hoje!", Toast.LENGTH_SHORT).show()
                         }
@@ -115,14 +122,10 @@ class SugestaoUser : AppCompatActivity() {
         val checkExercicios = dialogView.findViewById<CheckBox>(R.id.check_add_exercicios)
         val btnConfirmar = dialogView.findViewById<Button>(R.id.btn_confirmar_add_sugestao)
 
-        // --- A CORREÇÃO ESTÁ AQUI ---
         val allCheckBoxes = mapOf(
-            "Respiração Guiada" to checkRespiracao,
-            "Prática de Meditação" to checkMeditacao,
-            "Podcast Sugerido" to checkPodcasts,
-            "Exercício Mental" to checkExercicios,
-            "Dica de Dieta" to checkDietas,
-            "Livro Sugerido" to checkLivros // Alterado de "Livro do Mês"
+            "Respiração Guiada" to checkRespiracao, "Prática de Meditação" to checkMeditacao,
+            "Podcast Sugerido" to checkPodcasts, "Exercício Mental" to checkExercicios,
+            "Dica de Dieta" to checkDietas, "Livro Sugerido" to checkLivros
         )
 
         val currentInterests = currentCardStates.filter { it.isVisible }.map { it.title }.toSet()

@@ -1,5 +1,6 @@
 package com.example.meuappfirebase.ia
 
+import android.content.Context
 import android.util.Log
 import com.apol.myapplication.data.model.User
 import com.example.meuappfirebase.BuildConfig
@@ -10,7 +11,7 @@ import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 
-class AISuggestionsService {
+class AISuggestionsService(private val context: Context) {
 
     private val generativeModel = GenerativeModel(
         modelName = "gemini-1.5-flash-latest",

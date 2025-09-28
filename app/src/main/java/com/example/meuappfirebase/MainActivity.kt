@@ -8,8 +8,10 @@ import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
+import androidx.work.*
 import com.example.meuappfirebase.databinding.ActivityMainBinding
 import kotlinx.coroutines.launch
+import java.util.concurrent.TimeUnit
 
 class MainActivity : AppCompatActivity() {
 
@@ -22,21 +24,19 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Chama a verificação de sessão assim que a tela é criada
         verificarSessaoAtiva()
         configurarBotoes()
         observarEstado()
     }
 
-    /**
-     * Verifica se já existe um usuário logado ao abrir o app.
-     */
     private fun verificarSessaoAtiva() {
         if (viewModel.getCurrentUser() != null && viewModel.getCurrentUser()!!.isEmailVerified) {
             Log.d(TAG, "Sessão ativa encontrada. Iniciando sincronização...")
-            // Esconde a UI de login e mostra um carregamento
             binding.root.visibility = View.INVISIBLE
-            // Se já há uma sessão, sincronizamos e então navegamos.
+
+            // MUDANÇA: Agendamos a tarefa diária aqui
+            scheduleDailySuggestionUpdate()
+
             iniciarSincronizacaoENavegacao()
         } else {
             Log.d(TAG, "Nenhuma sessão ativa. Exibindo tela de login.")
@@ -44,9 +44,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    /**
-     * Configura os cliques dos botões de login e registro.
-     */
     private fun configurarBotoes() {
         binding.buttonavancarinfousuario.setOnClickListener {
             val email = binding.editTextusuario.text.toString().trim()
@@ -59,10 +56,10 @@ class MainActivity : AppCompatActivity() {
 
             binding.progressBar.visibility = View.VISIBLE
 
-            // 1. Tenta fazer o login
             viewModel.login(email, senha) {
-                // 2. Se o login for bem-sucedido, inicia a sincronização
                 Log.d(TAG, "Login bem-sucedido. Iniciando sincronização...")
+                // MUDANÇA: Agendamos a tarefa diária aqui também, após um novo login
+                scheduleDailySuggestionUpdate()
                 iniciarSincronizacaoENavegacao()
             }
         }
@@ -72,18 +69,13 @@ class MainActivity : AppCompatActivity() {
             startActivity(intent)
         }
         binding.textView5.setOnClickListener {
-            Toast.makeText(this, "Tela de Recuperar Senha a ser implementada", Toast.LENGTH_SHORT).show()
+            val intent = Intent(this, RecuperarSenhaActivity::class.java)
+            startActivity(intent)
         }
     }
 
-    /**
-     * // NOVO E ESSENCIAL
-     * Esta função centraliza a chamada de sincronização e garante que a navegação
-     * para o Roteador SÓ aconteça depois que a sincronização terminar.
-     */
     private fun iniciarSincronizacaoENavegacao() {
         viewModel.syncUserProfileOnLogin {
-            // Este código dentro do lambda só será executado QUANDO a sincronização terminar.
             Log.d(TAG, "Sincronização completa. Navegando para o Roteador.")
             val intent = Intent(this, RoteadorActivity::class.java)
             intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
@@ -92,9 +84,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    /**
-     * Observa o estado da UI para mostrar erros ou loading.
-     */
     private fun observarEstado() {
         lifecycleScope.launch {
             viewModel.uiState.collect { state ->
@@ -104,5 +93,26 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
+    }
+
+    // --- FUNÇÃO ADICIONADA PARA AGENDAR A TAREFA DIÁRIA ---
+    private fun scheduleDailySuggestionUpdate() {
+        val constraints = Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED) // Só roda com internet
+            .build()
+
+        // Configura a tarefa para repetir a cada 24 horas
+        val repeatingRequest = PeriodicWorkRequestBuilder<UpdateSuggestionsWorker>(1, TimeUnit.DAYS)
+            .setConstraints(constraints)
+            .build()
+
+        // Envia a tarefa para o WorkManager, garantindo que não haverá duplicatas
+        WorkManager.getInstance(this).enqueueUniquePeriodicWork(
+            "dailySuggestionUpdate", // Nome único da tarefa
+            ExistingPeriodicWorkPolicy.KEEP, // Se já estiver agendada, mantém a antiga.
+            repeatingRequest
+        )
+
+        Log.d(TAG, "Tarefa diária de atualização de sugestões foi agendada/verificada.")
     }
 }

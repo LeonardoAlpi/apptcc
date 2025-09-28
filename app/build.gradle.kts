@@ -96,6 +96,8 @@ dependencies {
 
     // --- Multidex (se multiDexEnabled = true) ---
     implementation(libs.androidx.multidex)
+
+    implementation(libs.androidx.work.runtime.ktx)
 }
 
 // <-- ADICIONADO 3: Bloco para ler a API Key do arquivo local.properties
