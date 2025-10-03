@@ -44,11 +44,11 @@
         <activity android:name=".RegistroActivity" android:exported="false" />
         <activity android:name=".VerificationActivity" android:exported="false" />
         <activity android:name=".RecuperarSenhaActivity" android:exported="false" />
-        <activity android:name=".infousuario" android:exported="false" />
-        <activity android:name=".livro" android:exported="false" />
-        <activity android:name=".saudemental" android:exported="false" />
-        <activity android:name=".pergunta01" android:exported="false" />
-        <activity android:name=".sujestao" android:exported="false" />
+        <activity android:name=".infousuario" android:theme="@style/Theme.App.Transparent" android:exported="false" />
+        <activity android:name=".livro"  android:theme="@style/Theme.App.Transparent" android:exported="false" />
+        <activity android:name=".saudemental" android:theme="@style/Theme.App.Transparent" android:exported="false" />
+        <activity android:name=".pergunta01" android:theme="@style/Theme.App.Transparent" android:exported="false" />
+        <activity android:name=".sujestao" android:theme="@style/Theme.App.Transparent" android:exported="false" />
         <activity android:name=".Bemvindouser" android:exported="false" />
         <activity android:name=".configuracoes" android:exported="false" />
         <activity android:name=".HabitosActivity" android:exported="false" />

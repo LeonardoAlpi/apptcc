@@ -1,5 +1,7 @@
 package com.example.meuappfirebase
 
+// import android.R // << IMPORT REMOVIDO: Evita conflitos com seus recursos
+import android.app.ActivityOptions // << IMPORT ADICIONADO: Necessário para a nova animação
 import android.content.Intent
 import android.os.Bundle
 import android.widget.RadioButton
@@ -20,10 +22,8 @@ class pergunta01 : AppCompatActivity() {
         binding = ActivityPergunta01Binding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Verificação redundante em onCreate foi REMOVIDA.
-
         configurarBotaoAvancar()
-        observarEstado() // <-- Adicionado para um fluxo correto
+        observarEstado()
     }
 
     private fun configurarBotaoAvancar() {
@@ -49,25 +49,34 @@ class pergunta01 : AppCompatActivity() {
             val praticaAtividade = findViewById<RadioButton>(idPratica).text.toString()
             val tempoDisponivel = findViewById<RadioButton>(idTempo).text.toString()
 
-            // <-- MUDANÇA PRINCIPAL
-            // Chama a nova função no ViewModel para salvar os dados e ATUALIZAR O PASSO
             viewModel.salvarDadosEtapa4(praticaAtividade, tempoDisponivel, espacos)
         }
     }
 
     private fun observarEstado() {
-        // Observa o sucesso da atualização para navegar de volta ao Roteador
         lifecycleScope.launch {
             viewModel.onboardingStepUpdated.collect { success ->
                 if (success) {
                     val intent = Intent(this@pergunta01, RoteadorActivity::class.java)
-                    startActivity(intent)
-                    finish()
+
+                    // --- INÍCIO DA MUDANÇA ---
+                    // 1. Cria o pacote de opções com as animações de fade
+                    val options = ActivityOptions.makeCustomAnimation(
+                        this@pergunta01,
+                        R.anim.fade_in, // Animação para a nova tela que entra
+                        R.anim.fade_out  // Animação para a tela antiga que sai
+                    )
+
+                    // 2. Inicia a nova activity passando o pacote de opções
+                    startActivity(intent, options.toBundle())
+                    // --- FIM DA MUDANÇA ---
+
+                    // O overridePendingTransition foi removido daqui
+                    finishAfterTransition()
                 }
             }
         }
 
-        // Observa possíveis erros
         lifecycleScope.launch {
             viewModel.uiState.collect { state ->
                 state.error?.let { Toast.makeText(this@pergunta01, it, Toast.LENGTH_LONG).show() }
