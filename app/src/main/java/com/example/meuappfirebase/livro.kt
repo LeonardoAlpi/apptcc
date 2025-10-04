@@ -1,7 +1,9 @@
 package com.example.meuappfirebase
 
+import android.app.ActivityOptions // << IMPORT ADICIONADO
 import android.content.Intent
 import android.os.Bundle
+import android.widget.RadioButton
 import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
@@ -18,10 +20,6 @@ class livro : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityLivroBinding.inflate(layoutInflater)
         setContentView(binding.root)
-
-        // A verificação que existia aqui foi removida. O RoteadorActivity
-        // já é responsável por garantir que o usuário chegue na tela certa.
-        // Isso simplifica o código e centraliza a lógica de navegação.
 
         configurarBotaoAvancar()
         observarEstado()
@@ -50,21 +48,29 @@ class livro : AppCompatActivity() {
                 return@setOnClickListener
             }
 
-            // <-- MUDANÇA PRINCIPAL
-            // Chama a nova função no ViewModel para salvar os dados e ATUALIZAR O PASSO
             viewModel.salvarDadosEtapa2(temHabitoLeitura, segueDieta, gostariaSeguirDieta)
         }
     }
 
     private fun observarEstado() {
         lifecycleScope.launch {
-            // Observa o estado para saber quando a atualização terminou
             viewModel.onboardingStepUpdated.collect { success ->
                 if (success) {
-                    // Dados salvos com sucesso, volta para o Roteador
                     val intent = Intent(this@livro, RoteadorActivity::class.java)
-                    startActivity(intent)
-                    finish()
+
+                    // --- INÍCIO DA MUDANÇA ---
+                    // 1. Cria o pacote de opções com as animações
+                    val options = ActivityOptions.makeCustomAnimation(
+                        this@livro,
+                        R.anim.fade_in,
+                        R.anim.fade_out
+                    )
+
+                    // 2. Inicia a activity passando as opções de animação
+                    startActivity(intent, options.toBundle())
+                    // --- FIM DA MUDANÇA ---
+
+                    finishAfterTransition()
                 }
             }
         }

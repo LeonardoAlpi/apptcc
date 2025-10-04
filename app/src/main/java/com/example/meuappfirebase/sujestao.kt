@@ -1,5 +1,6 @@
 package com.example.meuappfirebase
 
+import android.app.ActivityOptions // << IMPORT ADICIONADO
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
@@ -12,7 +13,6 @@ import kotlinx.coroutines.launch
 class sujestao : AppCompatActivity() {
 
     private lateinit var binding: ActivitySujestaoBinding
-    // MUDANÇA: Adicionamos os dois ViewModels
     private val authViewModel: AuthViewModel by viewModels()
     private val suggestionsViewModel: SuggestionsViewModel by viewModels()
 
@@ -23,12 +23,11 @@ class sujestao : AppCompatActivity() {
 
         configurarCheckBoxes()
         configurarBotaoAvancar()
-        observarEstado() // MUDANÇA: Renomeado para observar ambos os ViewModels
+        observarEstado()
     }
 
     private fun configurarBotaoAvancar() {
         binding.buttonavancarsujestao.setOnClickListener {
-            // ... (seu código para coletar os interesses selecionados) ...
             val interessesSelecionados = mutableListOf<String>()
             binding.apply {
                 if (checkBox5nenhumaatividade.isChecked) {
@@ -40,37 +39,42 @@ class sujestao : AppCompatActivity() {
                     if (checkBox4exerciciomentais.isChecked) interessesSelecionados.add(checkBox4exerciciomentais.text.toString())
                 }
             }
-
             if (interessesSelecionados.isEmpty()) {
                 Toast.makeText(this, "Por favor, selecione ao menos uma opção!", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
-
-            // A Activity apenas avisa o ViewModel para salvar, a navegação acontece no observer
             authViewModel.salvarDadosEtapa5(interessesSelecionados)
         }
     }
 
     private fun observarEstado() {
-        // Observa o AuthViewModel para saber quando o onboarding terminou
         lifecycleScope.launch {
             authViewModel.onboardingStepUpdated.collect { success ->
                 if (success) {
-                    authViewModel.resetOnboardingStepUpdated() // Limpa o evento
+                    authViewModel.resetOnboardingStepUpdated()
 
-                    // MUDANÇA: Quando o onboarding termina, mandamos a IA gerar as sugestões
                     Toast.makeText(this@sujestao, "Preparando suas primeiras sugestões...", Toast.LENGTH_LONG).show()
                     suggestionsViewModel.gerarEcarregarSugestoes()
 
-                    // E então navegamos para o Roteador
                     val intent = Intent(this@sujestao, RoteadorActivity::class.java)
-                    startActivity(intent)
-                    finish()
+
+                    // --- INÍCIO DA MUDANÇA ---
+                    // 1. Cria o pacote de opções com as animações
+                    val options = ActivityOptions.makeCustomAnimation(
+                        this@sujestao,
+                        R.anim.fade_in,
+                        R.anim.fade_out
+                    )
+
+                    // 2. Inicia a activity passando as opções de animação
+                    startActivity(intent, options.toBundle())
+                    // --- FIM DA MUDANÇA ---
+
+                    finishAfterTransition()
                 }
             }
         }
 
-        // Observa o SuggestionsViewModel por mensagens de status (erros, etc.)
         lifecycleScope.launch {
             suggestionsViewModel.statusMessage.observe(this@sujestao) { event ->
                 event.getContentIfNotHandled()?.let { message ->
@@ -80,7 +84,6 @@ class sujestao : AppCompatActivity() {
         }
     }
 
-    // ... (sua função configurarCheckBoxes continua igual)
     private fun configurarCheckBoxes() {
         val checkBoxesAtividades = listOf(
             binding.checkBoxrespiracao,
@@ -88,14 +91,12 @@ class sujestao : AppCompatActivity() {
             binding.checkBox3podcasts,
             binding.checkBox4exerciciomentais
         )
-
         binding.apply {
             cardRespiracao.setOnClickListener { checkBoxrespiracao.isChecked = !checkBoxrespiracao.isChecked }
             cardMeditacao.setOnClickListener { checkBox2meditacao.isChecked = !checkBox2meditacao.isChecked }
             cardPodcasts.setOnClickListener { checkBox3podcasts.isChecked = !checkBox3podcasts.isChecked }
             cardExerciciosMentais.setOnClickListener { checkBox4exerciciomentais.isChecked = !checkBox4exerciciomentais.isChecked }
             cardNenhuma.setOnClickListener { checkBox5nenhumaatividade.isChecked = !checkBox5nenhumaatividade.isChecked }
-
             checkBox5nenhumaatividade.setOnCheckedChangeListener { _, isChecked ->
                 if (isChecked) {
                     checkBoxesAtividades.forEach { checkBox ->
@@ -108,7 +109,6 @@ class sujestao : AppCompatActivity() {
                     }
                 }
             }
-
             checkBoxesAtividades.forEach { checkBox ->
                 checkBox.setOnCheckedChangeListener { _, isChecked ->
                     if (isChecked) checkBox5nenhumaatividade.isChecked = false
