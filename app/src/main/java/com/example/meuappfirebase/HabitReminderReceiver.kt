@@ -1,4 +1,4 @@
-package com.apol.myapplication
+package com.apol.myapplication // Mantendo seu pacote original
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -9,93 +9,44 @@ import android.content.Intent
 import android.os.Build
 import android.util.Log
 import androidx.core.app.NotificationCompat
-import com.apol.myapplication.data.model.Habito
-import com.example.meuappfirebase.HabitosActivity
+import com.example.meuappfirebase.HabitosActivity // Importe sua Activity de Hábitos
 import com.example.meuappfirebase.R
-import com.google.firebase.auth.ktx.auth
-import com.google.firebase.ktx.Firebase
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
-import java.util.*
 
 class HabitReminderReceiver : BroadcastReceiver() {
 
     private val TAG = "HabitReminderReceiver"
 
     override fun onReceive(context: Context, intent: Intent) {
-        Log.d(TAG, "==============================================")
-        Log.d(TAG, "Alarme recebido! Iniciando verificação...")
-        val pendingResult = goAsync()
+        // --- LÓGICA SIMPLIFICADA ---
+        // Apenas pegamos os dados que o alarme nos enviou.
+        val habitId = intent.getStringExtra("HABIT_ID")
+        val habitName = intent.getStringExtra("HABIT_NAME")
 
-        CoroutineScope(Dispatchers.IO).launch {
-            try {
-                verificarEnotificarHabitos(context)
-            } finally {
-                pendingResult.finish()
-                Log.d(TAG, "Verificação finalizada.")
-                Log.d(TAG, "==============================================")
-            }
-        }
-    }
-
-    private suspend fun verificarEnotificarHabitos(context: Context) {
-        val usuario = Firebase.auth.currentUser
-        if (usuario == null) {
-            Log.e(TAG, "ERRO: Usuário nulo. O Receiver não pode continuar.")
+        if (habitId == null || habitName == null) {
+            Log.e(TAG, "Alarme recebido sem os dados do hábito.")
             return
         }
-        Log.d(TAG, "Usuário encontrado: ${usuario.uid}")
 
-        val hojeStr = SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(Date())
-        val dao = AppDatabase.getDatabase(context).habitoDao()
-        Log.d(TAG, "Data de hoje para verificação: $hojeStr")
+        Log.d(TAG, "Alarme recebido para o hábito: $habitName")
+        val nomeLimpo = removerEmoji(habitName).trim()
 
-        // 1. Pega TODOS os hábitos do usuário
-        val todosHabitos: List<Habito> = dao.getHabitosByUser(usuario.uid)
-        Log.d(TAG, "Passo 1: dao.getHabitosByUser retornou ${todosHabitos.size} hábito(s).")
-        if (todosHabitos.isNotEmpty()) {
-            Log.d(TAG, "Nomes dos hábitos encontrados: ${todosHabitos.joinToString { it.nome }}")
-        }
-
-        // 2. Pega os IDs de todos os hábitos já CONCLUÍDOS hoje
-        val habitosConcluidosIds: Set<Long> = dao.getCompletedHabitIdsForDate(hojeStr).toSet()
-        Log.d(TAG, "Passo 2: dao.getCompletedHabitIdsForDate retornou ${habitosConcluidosIds.size} ID(s) concluído(s) hoje.")
-
-        // 3. Filtra para encontrar os hábitos PENDENTES
-        val habitosPendentes = todosHabitos.filter { habito ->
-            habito.id !in habitosConcluidosIds
-        }
-        Log.d(TAG, "Passo 3: Filtro resultou em ${habitosPendentes.size} hábito(s) pendente(s).")
-        Log.d(TAG, "Nomes dos hábitos pendentes: ${habitosPendentes.joinToString { it.nome }}")
-
-
-        if (habitosPendentes.isNotEmpty()) {
-            val primeiroHabitoPendente = habitosPendentes.first()
-            val nomeHabito = removerEmoji(primeiroHabitoPendente.nome).trim()
-
-            val mensagem = if (habitosPendentes.size > 1) {
-                "'$nomeHabito' e outros ${habitosPendentes.size - 1} hábitos estão esperando por você!"
-            } else {
-                "Não se esqueça de completar o hábito '$nomeHabito' hoje."
-            }
-            sendNotification(context, "Seus hábitos te aguardam!", mensagem)
-        } else {
-            Log.d(TAG, "Conclusão: Nenhum hábito pendente encontrado. Nenhuma notificação necessária.")
-        }
+        sendNotification(
+            context,
+            "Hora do Hábito!",
+            "Não se esqueça de completar: $nomeLimpo",
+            habitId
+        )
     }
 
-    private fun sendNotification(context: Context, title: String, message: String) {
+    private fun sendNotification(context: Context, title: String, message: String, habitId: String) {
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         val channelId = "habit_reminder_channel"
 
-        // --- MUDANÇA AQUI: INTENÇÃO PARA ABRIR O APP AO TOCAR NA NOTIFICAÇÃO ---
+        // Intent para abrir a tela de hábitos ao clicar
         val intent = Intent(context, HabitosActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         }
-        val pendingIntent = PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_IMMUTABLE)
-        // --- FIM DA MUDANÇA ---
+        val pendingIntent = PendingIntent.getActivity(context, habitId.hashCode(), intent, PendingIntent.FLAG_IMMUTABLE)
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(channelId, "Lembretes de Hábitos", NotificationManager.IMPORTANCE_DEFAULT)
@@ -103,17 +54,17 @@ class HabitReminderReceiver : BroadcastReceiver() {
         }
 
         val notification = NotificationCompat.Builder(context, channelId)
-            .setSmallIcon(R.drawable.ic_notification_icon) // Garanta que este ícone existe
+            .setSmallIcon(R.drawable.ic_notification_icon)
             .setContentTitle(title)
             .setContentText(message)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setAutoCancel(true)
-            .setContentIntent(pendingIntent) // <-- Linha adicionada para tornar a notificação clicável
+            .setContentIntent(pendingIntent)
             .build()
 
-        // Usar um ID fixo (ex: 1) garante que uma notificação substitua a anterior
-        notificationManager.notify(1, notification)
-        Log.d(TAG, "Notificação enviada: $message")
+        // Usamos o hashCode do ID do hábito para que cada notificação seja única
+        notificationManager.notify(habitId.hashCode(), notification)
+        Log.d(TAG, "Notificação enviada para o hábito ID: $habitId")
     }
 
     private fun removerEmoji(texto: String): String {
