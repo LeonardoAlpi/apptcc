@@ -22,6 +22,7 @@ adapters = "3.2.0-alpha11"
 multidex = "2.0.1"
 google-ai-generativeai = "0.5.0"
 androidx-work = "2.9.0"
+firebase-functions-ktx = "20.4.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -57,6 +58,8 @@ androidx-adapters = { group = "androidx.databinding", name = "adapters", version
 androidx-multidex = { group = "androidx.multidex", name = "multidex", version.ref = "multidex" }
 google-ai-generativeai = { group = "com.google.ai.client.generativeai", name = "generativeai", version.ref = "google-ai-generativeai" }
 androidx-work-runtime-ktx = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "androidx-work" }
+
+firebase-functions-ktx = { group = "com.google.firebase", name = "firebase-functions-ktx", version.ref = "firebase-functions-ktx" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

@@ -19,7 +19,7 @@ class UpdateSuggestionsWorker(appContext: Context, workerParams: WorkerParameter
         val auth = Firebase.auth
         val firestore = Firebase.firestore
         val userDao = AppDatabase.getDatabase(applicationContext).userDao()
-        val aiService = AISuggestionsService(applicationContext)
+        val aiService = AISuggestionsService()
 
         val user = auth.currentUser ?: return Result.failure()
         val userProfile = userDao.getUserById(user.uid)

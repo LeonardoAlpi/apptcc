@@ -23,7 +23,7 @@ class SuggestionsViewModel(application: Application) : AndroidViewModel(applicat
     private val auth = Firebase.auth
     private val firestore = Firebase.firestore
     private val userDao = AppDatabase.getDatabase(application).userDao()
-    private val aiService = AISuggestionsService(application)
+    private val aiService = AISuggestionsService()
 
     private val _suggestionCards = MutableLiveData<List<SuggestionCardState>>()
     val suggestionCards: LiveData<List<SuggestionCardState>> = _suggestionCards
