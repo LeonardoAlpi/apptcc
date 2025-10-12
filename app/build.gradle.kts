@@ -1,14 +1,9 @@
-import org.gradle.kotlin.dsl.java
-import java.util.Properties
-import java.io.FileInputStream
-
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.google.gms.google.services)
     alias(libs.plugins.kotlin.serialization)
     id("kotlin-kapt")
-
 }
 
 android {
@@ -39,13 +34,13 @@ android {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
+
     kotlinOptions {
         jvmTarget = "11"
     }
 
     buildFeatures {
         viewBinding = true
-        buildConfig = true // <-- ADICIONADO 1: Habilita o BuildConfig
     }
 
     packaging {
@@ -55,7 +50,7 @@ android {
 }
 
 dependencies {
-    // --- Dependências Essenciais para XML/Activities ---
+    // --- AndroidX ---
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
@@ -64,23 +59,24 @@ dependencies {
     implementation(libs.androidx.activity.ktx)
     implementation(libs.androidx.lifecycle.livedata.ktx)
 
-    // --- Firebase (BOM garante compatibilidade entre as libs Firebase) ---
+    // --- Firebase ---
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.auth.ktx)
     implementation(libs.firebase.firestore.ktx)
     implementation(libs.firebase.storage.ktx)
     implementation(libs.firebase.appcheck.debug)
+    implementation(libs.firebase.functions.ktx) // Cloud Functions
 
-    // --- IA do Google (Gemini) ---
-    implementation(libs.google.ai.generativeai) // <-- ADICIONADO 2: A dependência correta
+    // --- Coroutines e GSON ---
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
+    implementation("com.google.code.gson:gson:2.11.0")
 
     // --- Room ---
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
-    implementation(libs.androidx.adapters)
     kapt(libs.room.compiler)
 
-    // --- Rede ---
+    // --- Network ---
     implementation(libs.retrofit)
     implementation(libs.retrofit.converter.gson)
     implementation(libs.okhttp.logging.interceptor)
@@ -89,20 +85,12 @@ dependencies {
     // --- Imagens ---
     implementation(libs.glide)
 
+    // --- Multidex ---
+    implementation(libs.androidx.multidex)
+    implementation(libs.androidx.work.runtime.ktx)
+
     // --- Testes ---
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
-
-    // --- Multidex (se multiDexEnabled = true) ---
-    implementation(libs.androidx.multidex)
-
-    implementation(libs.androidx.work.runtime.ktx)
-    implementation(libs.firebase.functions.ktx)
-}
-
-// <-- ADICIONADO 3: Bloco para ler a API Key do arquivo local.properties
-Properties().apply {
-    load(FileInputStream(rootProject.file("local.properties")))
-    android.defaultConfig.buildConfigField("String", "GEMINI_API_KEY", "\"${getProperty("GEMINI_API_KEY")}\"")
 }

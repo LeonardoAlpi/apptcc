@@ -12,7 +12,7 @@ data class User(
     @PrimaryKey(autoGenerate = true)
     val id: Int = 0,
     val email: String? = null,
-    val userId: String? = null, // Este é o UID do Firebase
+    val userId: String? = null, // UID do Firebase
     var nome: String? = null,
     var idade: Int? = null,
     var peso: Float? = null,

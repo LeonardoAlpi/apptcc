@@ -16,11 +16,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-data class AuthUiState(
-    val isLoading: Boolean = false,
-    val error: String? = null
-)
-
 class AuthViewModel(application: Application) : AndroidViewModel(application) {
 
     private val auth: FirebaseAuth = Firebase.auth
@@ -28,7 +23,6 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
     private val appDb = AppDatabase.getDatabase(application)
     private val userDao = appDb.userDao()
 
-    // Lógica de criação de hábitos que foi reincorporada
     private val mapaDeHabitosRuins = mapOf(
         "Fumar" to "🚭 Fumar Menos",
         "Beber" to "🚱 Não Beber",
@@ -134,8 +128,6 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
             }
     }
 
-    // --- NOVAS FUNÇÕES DE SALVAMENTO DO QUESTIONÁRIO (ONBOARDING) ---
-
     fun salvarDadosEtapa1(nome: String, idade: Int, peso: Float, altura: Float, genero: String) {
         viewModelScope.launch {
             try {
@@ -174,7 +166,6 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    // CORRIGIDO: Agora esta função também cria os hábitos
     fun salvarDadosEtapa3(habitos: List<String>, problemas: List<String>) {
         viewModelScope.launch {
             try {
@@ -185,7 +176,6 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                     it.onboardingStep = 4
                     updateUser(it)
 
-                    // Lógica de criação de hábitos que foi reincorporada
                     createHabitsFromQuestionnaire(habitos) {
                         _onboardingStepUpdated.value = true
                     }
@@ -229,8 +219,6 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
     }
-
-    // --- FUNÇÕES AUXILIARES E OUTRAS ---
 
     private suspend fun updateUser(user: User) {
         userDao.updateUser(user)

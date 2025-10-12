@@ -1,6 +1,5 @@
 package com.example.meuappfirebase
 
-// ... (seus imports continuam os mesmos) ...
 import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -14,13 +13,11 @@ import androidx.appcompat.app.AppCompatActivity
 import com.example.meuappfirebase.databinding.ActivitySugestaoUserBinding
 import com.example.meuappfirebase.databinding.CardSugestaoBinding
 
-
 class SugestaoUser : AppCompatActivity() {
 
     private lateinit var binding: ActivitySugestaoUserBinding
     private val viewModel: SuggestionsViewModel by viewModels()
 
-    // ... (suas outras propriedades continuam as mesmas) ...
     private lateinit var cardViews: Map<String, View>
     private var currentCardStates: List<SuggestionCardState> = emptyList()
 
@@ -48,37 +45,47 @@ class SugestaoUser : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        // MUDANÇA: Agora chama a função rápida que só lê o cache
-        viewModel.carregarSugestoesDoCache()
+        // Chama a busca de sugestões (agora via Cloud Function)
+        viewModel.buscarSugestoesDaIA()
     }
 
-    // ... (o resto do seu código, como 'onBackPressed', 'observarViewModel', etc., continua igual)
     override fun onBackPressed() {
         finishAffinity()
     }
 
     private fun observarViewModel() {
+        // Observa a lista de cards para exibir na tela
         viewModel.suggestionCards.observe(this) { cardStates ->
-            // Adicionada verificação para evitar crash se a lista for nula
             if (cardStates == null) return@observe
             currentCardStates = cardStates
             atualizarTodosOsCards()
         }
+
+        // Observa mensagens de status para mostrar Toasts
         viewModel.statusMessage.observe(this) { event ->
             event.getContentIfNotHandled()?.let { message ->
                 Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
             }
         }
+
+        // Observa o estado de carregamento para mostrar/esconder o ProgressBar
+        viewModel.isLoading.observe(this) { isLoading ->
+            binding.progressBarSugestoes.visibility = if (isLoading) View.VISIBLE else View.GONE
+            // Esconde os cards enquanto carrega para evitar que o usuário veja conteúdo antigo
+            binding.scrollViewCards.visibility = if (isLoading) View.INVISIBLE else View.VISIBLE
+        }
     }
 
     private fun atualizarTodosOsCards() {
+        // Esconde todos os cards primeiro para garantir um estado limpo
+        cardViews.values.forEach { it.visibility = View.GONE }
+
         currentCardStates.forEach { state ->
             val cardView = cardViews[state.key]
             cardView?.let {
                 it.visibility = if (state.isVisible) View.VISIBLE else View.GONE
                 if (state.isVisible) {
                     val cardBinding = CardSugestaoBinding.bind(it)
-
                     cardBinding.iconeSugestao.setImageResource(state.iconResId)
                     cardBinding.tituloCardSugestao.text = state.title
                     cardBinding.textoSugestao.text = state.suggestionTitle
@@ -86,7 +93,6 @@ class SugestaoUser : AppCompatActivity() {
                     if (state.isCompleted) {
                         it.alpha = 0.6f
                         cardBinding.btnConcluirSugestao.visibility = View.GONE
-                        cardBinding.btnProximaSugestao.visibility = View.GONE
                         cardBinding.textoSugestao.setOnClickListener {
                             Toast.makeText(this, "Você já concluiu esta sugestão hoje!", Toast.LENGTH_SHORT).show()
                         }
@@ -123,9 +129,12 @@ class SugestaoUser : AppCompatActivity() {
         val btnConfirmar = dialogView.findViewById<Button>(R.id.btn_confirmar_add_sugestao)
 
         val allCheckBoxes = mapOf(
-            "Respiração Guiada" to checkRespiracao, "Prática de Meditação" to checkMeditacao,
-            "Podcast Sugerido" to checkPodcasts, "Exercício Mental" to checkExercicios,
-            "Dica de Dieta" to checkDietas, "Livro Sugerido" to checkLivros
+            "Sugestões de Livros" to checkLivros,
+            "Dicas de Dieta" to checkDietas,
+            "Meditação" to checkMeditacao,
+            "Respiração Guiada" to checkRespiracao,
+            "Podcasts Relaxantes" to checkPodcasts,
+            "Exercícios Mentais" to checkExercicios
         )
 
         val currentInterests = currentCardStates.filter { it.isVisible }.map { it.title }.toSet()

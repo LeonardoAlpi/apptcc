@@ -1,6 +1,5 @@
 package com.example.meuappfirebase
 
-import android.app.ActivityOptions // << IMPORT ADICIONADO
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
@@ -13,8 +12,8 @@ import kotlinx.coroutines.launch
 class sujestao : AppCompatActivity() {
 
     private lateinit var binding: ActivitySujestaoBinding
+    // A tela agora só precisa do AuthViewModel para finalizar o onboarding
     private val authViewModel: AuthViewModel by viewModels()
-    private val suggestionsViewModel: SuggestionsViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -26,23 +25,32 @@ class sujestao : AppCompatActivity() {
         observarEstado()
     }
 
+    override fun onBackPressed() {
+        // Impede o usuário de voltar para uma tela anterior do questionário
+        finishAffinity()
+    }
+
     private fun configurarBotaoAvancar() {
         binding.buttonavancarsujestao.setOnClickListener {
             val interessesSelecionados = mutableListOf<String>()
             binding.apply {
                 if (checkBox5nenhumaatividade.isChecked) {
-                    interessesSelecionados.add(checkBox5nenhumaatividade.text.toString())
+                    interessesSelecionados.add("Nenhuma das opções")
                 } else {
-                    if (checkBoxrespiracao.isChecked) interessesSelecionados.add(checkBoxrespiracao.text.toString())
-                    if (checkBox2meditacao.isChecked) interessesSelecionados.add(checkBox2meditacao.text.toString())
-                    if (checkBox3podcasts.isChecked) interessesSelecionados.add(checkBox3podcasts.text.toString())
-                    if (checkBox4exerciciomentais.isChecked) interessesSelecionados.add(checkBox4exerciciomentais.text.toString())
+                    if (checkBoxLivros.isChecked) interessesSelecionados.add("Sugestões de Livros")
+                    if (checkBoxDietas.isChecked) interessesSelecionados.add("Dicas de Dieta")
+                    if (checkBoxrespiracao.isChecked) interessesSelecionados.add("Respiração Guiada")
+                    if (checkBox2meditacao.isChecked) interessesSelecionados.add("Meditação")
+                    if (checkBox3podcasts.isChecked) interessesSelecionados.add("Podcasts Relaxantes")
+                    if (checkBox4exerciciomentais.isChecked) interessesSelecionados.add("Exercícios Mentais")
                 }
             }
+
             if (interessesSelecionados.isEmpty()) {
                 Toast.makeText(this, "Por favor, selecione ao menos uma opção!", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
+
             authViewModel.salvarDadosEtapa5(interessesSelecionados)
         }
     }
@@ -53,32 +61,15 @@ class sujestao : AppCompatActivity() {
                 if (success) {
                     authViewModel.resetOnboardingStepUpdated()
 
-                    Toast.makeText(this@sujestao, "Preparando suas primeiras sugestões...", Toast.LENGTH_LONG).show()
-                    suggestionsViewModel.gerarEcarregarSugestoes()
+                    // --- CORREÇÃO APLICADA AQUI ---
+                    // A chamada para 'gerarSugestoesIniciais()' foi REMOVIDA, pois não é mais necessária.
+                    Toast.makeText(this@sujestao, "Cadastro finalizado!", Toast.LENGTH_LONG).show()
 
+                    // A navegação para o Roteador continua igual
                     val intent = Intent(this@sujestao, RoteadorActivity::class.java)
-
-                    // --- INÍCIO DA MUDANÇA ---
-                    // 1. Cria o pacote de opções com as animações
-                    val options = ActivityOptions.makeCustomAnimation(
-                        this@sujestao,
-                        R.anim.fade_in,
-                        R.anim.fade_out
-                    )
-
-                    // 2. Inicia a activity passando as opções de animação
-                    startActivity(intent, options.toBundle())
-                    // --- FIM DA MUDANÇA ---
-
-                    finishAfterTransition()
-                }
-            }
-        }
-
-        lifecycleScope.launch {
-            suggestionsViewModel.statusMessage.observe(this@sujestao) { event ->
-                event.getContentIfNotHandled()?.let { message ->
-                    Toast.makeText(this@sujestao, message, Toast.LENGTH_SHORT).show()
+                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                    startActivity(intent)
+                    finish()
                 }
             }
         }
@@ -89,14 +80,20 @@ class sujestao : AppCompatActivity() {
             binding.checkBoxrespiracao,
             binding.checkBox2meditacao,
             binding.checkBox3podcasts,
-            binding.checkBox4exerciciomentais
+            binding.checkBox4exerciciomentais,
+            binding.checkBoxLivros,
+            binding.checkBoxDietas
         )
+
         binding.apply {
             cardRespiracao.setOnClickListener { checkBoxrespiracao.isChecked = !checkBoxrespiracao.isChecked }
             cardMeditacao.setOnClickListener { checkBox2meditacao.isChecked = !checkBox2meditacao.isChecked }
             cardPodcasts.setOnClickListener { checkBox3podcasts.isChecked = !checkBox3podcasts.isChecked }
             cardExerciciosMentais.setOnClickListener { checkBox4exerciciomentais.isChecked = !checkBox4exerciciomentais.isChecked }
+            cardLivros.setOnClickListener { checkBoxLivros.isChecked = !checkBoxLivros.isChecked }
+            cardDietas.setOnClickListener { checkBoxDietas.isChecked = !checkBoxDietas.isChecked }
             cardNenhuma.setOnClickListener { checkBox5nenhumaatividade.isChecked = !checkBox5nenhumaatividade.isChecked }
+
             checkBox5nenhumaatividade.setOnCheckedChangeListener { _, isChecked ->
                 if (isChecked) {
                     checkBoxesAtividades.forEach { checkBox ->
@@ -109,6 +106,7 @@ class sujestao : AppCompatActivity() {
                     }
                 }
             }
+
             checkBoxesAtividades.forEach { checkBox ->
                 checkBox.setOnCheckedChangeListener { _, isChecked ->
                     if (isChecked) checkBox5nenhumaatividade.isChecked = false

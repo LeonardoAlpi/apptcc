@@ -1,6 +1,5 @@
 package com.example.meuappfirebase
 
-
 data class Sugestao(
     val categoria: String = "",
     val titulo: String = "",

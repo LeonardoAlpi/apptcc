@@ -31,77 +31,63 @@ class SuggestionsViewModel(application: Application) : AndroidViewModel(applicat
     private val _statusMessage = MutableLiveData<Event<String>>()
     val statusMessage: LiveData<Event<String>> = _statusMessage
 
-    // ... (o seu cardConfig continua o mesmo)
+    // LiveData para controlar o ProgressBar
+    private val _isLoading = MutableLiveData<Boolean>()
+    val isLoading: LiveData<Boolean> = _isLoading
+
     private val cardConfig = mapOf(
-        "LEITURA" to Triple("livros", R.drawable.ic_book, "Livro Sugerido"),
-        "DIETA" to Triple("dietas", R.drawable.ic_food, "Dica de Dieta"),
-        "MEDITACAO" to Triple("meditacao", R.drawable.ic_meditation, "Prática de Meditação"),
+        "LEITURA" to Triple("livros", R.drawable.ic_book, "Sugestões de Livros"),
+        "DIETA" to Triple("dietas", R.drawable.ic_food, "Dicas de Dieta"),
+        "MEDITACAO" to Triple("meditacao", R.drawable.ic_meditation, "Meditação"),
         "RESPIRACAO" to Triple("respiracao", R.drawable.ic_breathing, "Respiração Guiada"),
-        "PODCASTS" to Triple("podcasts", R.drawable.ic_podcast, "Podcast Sugerido"),
-        "SAUDE_MENTAL_ANSIEDADE" to Triple("exercicios", R.drawable.ic_brain, "Exercício Mental"),
-        "SAUDE_MENTAL_DEPRESSAO" to Triple("exercicios", R.drawable.ic_brain, "Exercício Mental"),
-        "SAUDE_MENTAL_ESTRESSE" to Triple("exercicios", R.drawable.ic_brain, "Exercício Mental"),
-        "SAUDE_MENTAL_MOTIVACAO" to Triple("exercicios", R.drawable.ic_brain, "Exercício Mental")
+        "PODCASTS" to Triple("podcasts", R.drawable.ic_podcast, "Podcasts Relaxantes"),
+        "SAUDE_MENTAL_ANSIEDADE" to Triple("exercicios", R.drawable.ic_brain, "Exercícios Mentais"),
+        "SAUDE_MENTAL_DEPRESSAO" to Triple("exercicios", R.drawable.ic_brain, "Exercícios Mentais"),
+        "SAUDE_MENTAL_ESTRESSE" to Triple("exercicios", R.drawable.ic_brain, "Exercícios Mentais"),
+        "SAUDE_MENTAL_MOTIVACAO" to Triple("exercicios", R.drawable.ic_brain, "Exercícios Mentais")
     )
 
-
     /**
-     * MUDANÇA: Gera novas sugestões e as salva. Chamada apenas em momentos estratégicos.
+     * NOVA FUNÇÃO PRINCIPAL: Chamada pela tela para buscar as sugestões da IA em tempo real.
      */
-    fun gerarEcarregarSugestoes() {
+    fun buscarSugestoesDaIA() {
         val user = auth.currentUser ?: return
-        _statusMessage.postValue(Event("Gerando novas sugestões personalizadas..."))
+        _isLoading.value = true // Mostra o loading
         viewModelScope.launch {
             val userProfile = userDao.getUserById(user.uid)
             try {
+                // Chama o serviço que contata a Cloud Function
                 val sugestoesDaIA = aiService.generateSuggestions(userProfile)
-                saveSuggestionsToFirestore(user.uid, sugestoesDaIA) {
-                    carregarSugestoesDoCache()
+
+                if (sugestoesDaIA.isNotEmpty()) {
+                    exibirSugestoes(sugestoesDaIA)
+                } else {
+                    _statusMessage.postValue(Event("Não foi possível obter sugestões no momento."))
+                    _suggestionCards.postValue(emptyList()) // Limpa a tela se não vier nada
                 }
+
             } catch (e: Exception) {
-                _statusMessage.postValue(Event("Não foi possível gerar as sugestões com a IA."))
+                _statusMessage.postValue(Event("Erro ao conectar com a IA."))
                 Log.e("SuggestionsViewModel", "Erro ao gerar sugestões da IA", e)
+            } finally {
+                _isLoading.value = false // Esconde o loading, mesmo se der erro
             }
         }
     }
 
-    /**
-     * MUDANÇA: Apenas lê os dados que já estão salvos no Firestore. É rápido e eficiente.
-     */
-    fun carregarSugestoesDoCache() {
+    private fun exibirSugestoes(sugestoes: List<Sugestao>) {
         val user = auth.currentUser ?: return
         val hoje = SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(Date())
-
-        val sugestoesRef = firestore.collection("usuarios").document(user.uid).collection("sugestoesIA")
         val estadoRef = firestore.collection("usuarios").document(user.uid).collection("estadoSugestoes").document(hoje)
 
-        sugestoesRef.get().addOnSuccessListener { sugestoesSnapshot ->
-            val sugestoesDaIA = sugestoesSnapshot.toObjects(Sugestao::class.java)
-
-            estadoRef.get().addOnSuccessListener { estadoSnapshot ->
-                val concluidas = estadoSnapshot.get("concluidas") as? List<String> ?: emptyList()
-                viewModelScope.launch {
-                    val userProfile = userDao.getUserById(user.uid)
-                    val userInterests = userProfile?.sugestoesInteresse
-                    buildUiStateFromAI(sugestoesDaIA, userInterests, concluidas)
-                }
+        // Busca o estado de conclusão das sugestões de hoje
+        estadoRef.get().addOnSuccessListener { estadoSnapshot ->
+            val concluidas = estadoSnapshot.get("concluidas") as? List<String> ?: emptyList()
+            viewModelScope.launch {
+                val userProfile = userDao.getUserById(user.uid)
+                val userInterests = userProfile?.sugestoesInteresse
+                buildUiStateFromAI(sugestoes, userInterests, concluidas)
             }
-        }.addOnFailureListener {
-            _statusMessage.postValue(Event("Não foi possível carregar sugestões."))
-        }
-    }
-
-    private fun saveSuggestionsToFirestore(userId: String, suggestions: List<Sugestao>, onComplete: () -> Unit) {
-        val batch = firestore.batch()
-        val collectionRef = firestore.collection("usuarios").document(userId).collection("sugestoesIA")
-
-        collectionRef.get().addOnSuccessListener { documents ->
-            for (doc in documents) { batch.delete(doc.reference) }
-            suggestions.forEach { sugestao ->
-                val newDocRef = collectionRef.document()
-                batch.set(newDocRef, sugestao)
-            }
-            batch.commit().addOnSuccessListener { onComplete() }
         }
     }
 
@@ -144,7 +130,7 @@ class SuggestionsViewModel(application: Application) : AndroidViewModel(applicat
         docRef.set(mapOf("lastUpdate" to FieldValue.serverTimestamp()), SetOptions.merge())
             .addOnSuccessListener {
                 docRef.update("concluidas", FieldValue.arrayUnion(suggestionTitle))
-                    .addOnSuccessListener { carregarSugestoesDoCache() } // Atualiza a UI
+                    .addOnSuccessListener { buscarSugestoesDaIA() }
             }
     }
 
@@ -155,12 +141,12 @@ class SuggestionsViewModel(application: Application) : AndroidViewModel(applicat
             roomUser?.let {
                 it.sugestoesInteresse = newInterests
                 userDao.updateUser(it)
+                firestore.collection("usuarios").document(user.uid).update("sugestoesInteresse", newInterests)
+                    .addOnSuccessListener {
+                        _statusMessage.postValue(Event("Preferências salvas!"))
+                        buscarSugestoesDaIA()
+                    }
             }
-            firestore.collection("usuarios").document(user.uid).update("sugestoesInteresse", newInterests)
-                .addOnSuccessListener {
-                    _statusMessage.postValue(Event("Preferências salvas!"))
-                    carregarSugestoesDoCache() // Atualiza a UI
-                }
         }
     }
 }
