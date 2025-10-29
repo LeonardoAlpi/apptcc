@@ -115,27 +115,35 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/editTextusuario" />
 
-    <EditText
-        android:id="@+id/editTextsenha"
-
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/textInputLayoutSenha"
         android:layout_width="0dp"
-        android:layout_height="55dp"
+        android:layout_height="wrap_content"
         android:layout_marginStart="32dp"
         android:layout_marginTop="8dp"
         android:layout_marginEnd="32dp"
-        android:background="@drawable/button_1"
-        android:drawableStart="@android:drawable/ic_lock_lock"
-        android:drawablePadding="16dp"
-        android:ems="10"
-        android:inputType="textPassword"
-        android:paddingStart="16dp"
-        android:textColor="#FFFFFF"
-        android:textColorHint="@color/white"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.0"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/textView4" />
+        app:layout_constraintTop_toBottomOf="@+id/textView4"
 
+        app:passwordToggleEnabled="true"
+        app:passwordToggleTint="@color/white"
+        app:hintEnabled="false">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/editTextsenha"
+            android:layout_width="match_parent"
+            android:layout_height="55dp"
+            android:background="@drawable/button_1"
+            android:drawableStart="@android:drawable/ic_lock_lock"
+            android:drawablePadding="16dp"
+            android:ems="10"
+            android:inputType="textPassword"
+            android:paddingStart="16dp"
+            android:textColor="#FFFFFF"
+            android:textColorHint="@color/white" />
+
+    </com.google.android.material.textfield.TextInputLayout>
     <TextView
         android:id="@+id/textView5"
         android:layout_width="wrap_content"
@@ -147,35 +155,29 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.848"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/editTextsenha" />
-
+        app:layout_constraintTop_toBottomOf="@+id/textInputLayoutSenha" />
     <TextView
-        android:id="@+id/textView8"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="32dp"
-        android:layout_marginTop="12dp"
-        android:text="Cadastre-se"
-        android:textColor="@color/white"
-        android:textStyle="bold"
-        android:clickable="true"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.016"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/editTextsenha" />
-
-    <Button
-        android:id="@+id/buttonavancarinfousuario"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="32dp"
-        android:layout_marginTop="60dp"
-        android:layout_marginEnd="32dp"
-        android:text="Avançar"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.0"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/editTextsenha" />
-
-
-</androidx.constraintlayout.widget.ConstraintLayout>
+    android:id="@+id/textView8"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:layout_marginStart="32dp"
+    android:layout_marginTop="12dp"
+    android:text="Cadastre-se"
+    android:textColor="@color/white"
+    android:textStyle="bold"
+    android:clickable="true"
+    app:layout_constraintEnd_toEndOf="parent"
+    app:layout_constraintHorizontal_bias="0.016"
+    app:layout_constraintStart_toStartOf="parent"
+    app:layout_constraintTop_toBottomOf="@+id/textInputLayoutSenha" /> <Button
+    android:id="@+id/buttonavancarinfousuario"
+    android:layout_width="0dp"
+    android:layout_height="wrap_content"
+    android:layout_marginStart="32dp"
+    android:layout_marginTop="60dp"
+    android:layout_marginEnd="32dp"
+    android:text="Avançar"
+    app:layout_constraintEnd_toEndOf="parent"
+    app:layout_constraintHorizontal_bias="0.0"
+    app:layout_constraintStart_toStartOf="parent"
+    app:layout_constraintTop_toBottomOf="@+id/textInputLayoutSenha" /> </androidx.constraintlayout.widget.ConstraintLayout>
