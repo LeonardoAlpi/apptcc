@@ -8,6 +8,7 @@ data class HabitUI(
     val count: Int,
     val isFavorited: Boolean,
     val isGoodHabit: Boolean,
-    val userOwnerId: String = "", // <-- ADICIONE O VALOR PADRÃO
+    val userOwnerId: String = "", // <-- Valor padrão
+    val daysOfWeek: Set<String> = emptySet(), // ✅ Adicionado campo que guarda os dias do hábito
     var isSelected: Boolean = false
 )

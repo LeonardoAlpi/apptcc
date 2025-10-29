@@ -1,6 +1,8 @@
 package com.example.meuappfirebase
 
 import android.content.Intent
+import android.content.res.ColorStateList
+import android.graphics.Paint
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -10,6 +12,7 @@ import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import com.example.meuappfirebase.databinding.ActivitySugestaoUserBinding
 import com.example.meuappfirebase.databinding.CardSugestaoBinding
 
@@ -45,7 +48,6 @@ class SugestaoUser : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        // Chama a busca de sugestões (agora via Cloud Function)
         viewModel.buscarSugestoesDaIA()
     }
 
@@ -54,30 +56,25 @@ class SugestaoUser : AppCompatActivity() {
     }
 
     private fun observarViewModel() {
-        // Observa a lista de cards para exibir na tela
         viewModel.suggestionCards.observe(this) { cardStates ->
             if (cardStates == null) return@observe
             currentCardStates = cardStates
             atualizarTodosOsCards()
         }
 
-        // Observa mensagens de status para mostrar Toasts
         viewModel.statusMessage.observe(this) { event ->
             event.getContentIfNotHandled()?.let { message ->
                 Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
             }
         }
 
-        // Observa o estado de carregamento para mostrar/esconder o ProgressBar
         viewModel.isLoading.observe(this) { isLoading ->
             binding.progressBarSugestoes.visibility = if (isLoading) View.VISIBLE else View.GONE
-            // Esconde os cards enquanto carrega para evitar que o usuário veja conteúdo antigo
             binding.scrollViewCards.visibility = if (isLoading) View.INVISIBLE else View.VISIBLE
         }
     }
 
     private fun atualizarTodosOsCards() {
-        // Esconde todos os cards primeiro para garantir um estado limpo
         cardViews.values.forEach { it.visibility = View.GONE }
 
         currentCardStates.forEach { state ->
@@ -90,25 +87,54 @@ class SugestaoUser : AppCompatActivity() {
                     cardBinding.tituloCardSugestao.text = state.title
                     cardBinding.textoSugestao.text = state.suggestionTitle
 
-                    if (state.isCompleted) {
-                        it.alpha = 0.6f
-                        cardBinding.btnConcluirSugestao.visibility = View.GONE
-                        cardBinding.textoSugestao.setOnClickListener {
-                            Toast.makeText(this, "Você já concluiu esta sugestão hoje!", Toast.LENGTH_SHORT).show()
-                        }
-                    } else {
-                        it.alpha = 1.0f
-                        cardBinding.btnConcluirSugestao.visibility = View.VISIBLE
-                        cardBinding.btnProximaSugestao.visibility = View.GONE
+                    cardBinding.btnProximaSugestao.visibility = View.GONE
+                    cardBinding.btnConcluirSugestao.visibility = View.VISIBLE
 
-                        cardBinding.textoSugestao.setOnClickListener {
+                    cardBinding.textoSugestao.setOnClickListener {
+                        AlertDialog.Builder(this)
+                            .setTitle(state.suggestionTitle)
+                            .setMessage(state.suggestionDescription)
+                            .setPositiveButton("OK", null)
+                            .show()
+                    }
+
+                    val corVerde = ColorStateList.valueOf(ContextCompat.getColor(this, android.R.color.holo_green_dark))
+                    val corBranca = ColorStateList.valueOf(ContextCompat.getColor(this, android.R.color.white))
+
+                    if (state.isCompleted) {
+                        // --- ESTADO CONCLUÍDO ---
+                        it.alpha = 0.6f
+                        cardBinding.btnConcluirSugestao.setImageResource(R.drawable.ic_cancel)
+                        cardBinding.btnConcluirSugestao.imageTintList =
+                            ColorStateList.valueOf(ContextCompat.getColor(this, android.R.color.white)) // Ícone branco ✅
+
+                        cardBinding.textoSugestao.paintFlags =
+                            cardBinding.textoSugestao.paintFlags or Paint.STRIKE_THRU_TEXT_FLAG
+
+                        cardBinding.btnConcluirSugestao.setOnClickListener {
                             AlertDialog.Builder(this)
-                                .setTitle(state.suggestionTitle)
-                                .setMessage(state.suggestionDescription)
-                                .setPositiveButton("OK", null)
+                                .setTitle("Desmarcar Sugestão")
+                                .setMessage("Deseja marcar esta sugestão como 'não concluída'?")
+                                .setPositiveButton("Sim") { _, _ ->
+                                    viewModel.markSuggestionAsNotDone(state.suggestionTitle)
+                                    Toast.makeText(this, "Sugestão desmarcada!", Toast.LENGTH_SHORT).show()
+                                }
+                                .setNegativeButton("Não", null)
                                 .show()
                         }
-                        cardBinding.btnConcluirSugestao.setOnClickListener { viewModel.markSuggestionAsDone(state.suggestionTitle) }
+
+                    } else {
+                        // --- ESTADO NÃO CONCLUÍDO ---
+                        it.alpha = 1.0f
+                        cardBinding.btnConcluirSugestao.setImageResource(R.drawable.ic_check)
+                        cardBinding.btnConcluirSugestao.imageTintList = corBranca
+
+                        cardBinding.textoSugestao.paintFlags =
+                            cardBinding.textoSugestao.paintFlags and Paint.STRIKE_THRU_TEXT_FLAG.inv()
+
+                        cardBinding.btnConcluirSugestao.setOnClickListener {
+                            viewModel.markSuggestionAsDone(state.suggestionTitle)
+                        }
                     }
                 }
             }

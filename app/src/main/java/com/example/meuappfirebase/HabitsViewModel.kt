@@ -185,7 +185,8 @@ class HabitosViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    private fun getHojeString(): String = SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(Date())
+    private fun getHojeString(): String =
+        SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(Date())
 
     private fun calcularSequencia(progressos: List<String>): Int {
         if (progressos.isEmpty()) return 0
@@ -206,10 +207,11 @@ class HabitosViewModel(application: Application) : AndroidViewModel(application)
     private fun com.google.firebase.firestore.DocumentSnapshot.toHabitUI(): HabitUI? {
         return try {
             val nome = getString("nome") ?: return null
-            val userOwnerId = getString("userOwnerId") ?: "" // Pega o ID do dono
+            val userOwnerId = getString("userOwnerId") ?: ""
             val progresso = get("progresso") as? List<String> ?: emptyList()
             val concluidoHoje = progresso.contains(getHojeString())
             val streak = calcularSequencia(progresso)
+            val diasProgramados = get("diasProgramados") as? List<String> ?: emptyList()
 
             HabitUI(
                 id = this.id,
@@ -226,7 +228,8 @@ class HabitosViewModel(application: Application) : AndroidViewModel(application)
                 count = if (concluidoHoje) 1 else 0,
                 isFavorited = getBoolean("isFavorito") ?: false,
                 isGoodHabit = getBoolean("isGoodHabit") ?: true,
-                userOwnerId = userOwnerId // Passa o valor para o construtor
+                userOwnerId = userOwnerId,
+                daysOfWeek = diasProgramados.toSet() // ✅ Campo novo adicionado aqui
             )
         } catch (e: Exception) {
             Log.e("HabitosViewModel", "Erro ao converter documento ${this.id} para HabitUI", e)

@@ -10,10 +10,9 @@ import android.graphics.drawable.Drawable
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
-import android.util.Log
+import android.widget.*
 import android.view.LayoutInflater
 import android.view.View
-import android.widget.*
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
@@ -60,15 +59,14 @@ class HabitosActivity : AppCompatActivity() {
         viewModel.tryToScheduleHabitReminders()
 
         val abrirDialogo = intent.getBooleanExtra("ABRIR_DIALOGO_NOVO_HABITO", false)
-        if (abrirDialogo) {
-            // Se sim, chama a função para mostrar o diálogo
-            mostrarDialogoNovoHabito()
-        }
+        if (abrirDialogo) mostrarDialogoNovoHabito()
     }
 
     private fun pedirPermissaoDeNotificacao() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+                != PackageManager.PERMISSION_GRANTED
+            ) {
                 requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
             }
         }
@@ -102,7 +100,7 @@ class HabitosActivity : AppCompatActivity() {
 
     private fun abrirTelaDePermissaoDeAlarme() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            Toast.makeText(this, "Para lembretes funcionarem, por favor, ative esta permissão.", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "Para lembretes funcionarem, ative esta permissão.", Toast.LENGTH_LONG).show()
             val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM)
             startActivity(intent)
         }
@@ -135,7 +133,9 @@ class HabitosActivity : AppCompatActivity() {
     }
 
     private fun setupListeners() {
-        binding.fabAddHabit.setOnClickListener { if (!modoExclusaoAtivo) mostrarDialogoNovoHabito() }
+        binding.fabAddHabit.setOnClickListener {
+            if (!modoExclusaoAtivo) mostrarDialogoNovoHabito()
+        }
 
         binding.btnDeleteSelected.setOnClickListener {
             val selecionados = habitsAdapter.getSelecionados()
@@ -171,7 +171,8 @@ class HabitosActivity : AppCompatActivity() {
 
     private fun mostrarDialogoNovoHabito() {
         val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_novo_habito, null)
-        val dialog = AlertDialog.Builder(this, R.style.Theme_HAM_Dialog_Transparent).setView(dialogView).create()
+        val dialog =
+            AlertDialog.Builder(this, R.style.Theme_HAM_Dialog_Transparent).setView(dialogView).create()
 
         val etHabitName = dialogView.findViewById<EditText>(R.id.et_habit_name)
         val btnAdicionar = dialogView.findViewById<Button>(R.id.btn_adicionar_habito)
@@ -188,45 +189,48 @@ class HabitosActivity : AppCompatActivity() {
                 dialog.dismiss()
             }
         }
-        dialogView.findViewById<Button>(R.id.btn_cancelar_habito).setOnClickListener { dialog.dismiss() }
+
+        dialogView.findViewById<Button>(R.id.btn_cancelar_habito)
+            .setOnClickListener { dialog.dismiss() }
         dialog.show()
     }
 
-    private fun ativarModoExclusao(habit: HabitUI) {
-        modoExclusaoAtivo = true
-        habitsAdapter.setModoExclusao(true)
-        binding.fabAddHabit.visibility = View.GONE
-        binding.btnDeleteSelected.visibility = View.VISIBLE
-        binding.clickOutsideView.visibility = View.VISIBLE
-        toggleSelecao(habit)
-    }
+    private fun mostrarDialogoEditarHabito(habit: HabitUI) {
+        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_novo_habito, null)
+        val dialog =
+            AlertDialog.Builder(this, R.style.Theme_HAM_Dialog_Transparent).setView(dialogView).create()
 
-    private fun desativarModoExclusao() {
-        modoExclusaoAtivo = false
-        habitsAdapter.setModoExclusao(false)
-        habitsAdapter.limparSelecao()
-        binding.fabAddHabit.visibility = View.VISIBLE
-        binding.btnDeleteSelected.visibility = View.GONE
-        binding.clickOutsideView.visibility = View.GONE
-    }
+        val title = dialogView.findViewById<TextView>(R.id.dialog_title)
+        val etHabitName = dialogView.findViewById<EditText>(R.id.et_habit_name)
+        val btnSalvar = dialogView.findViewById<Button>(R.id.btn_adicionar_habito)
+        val toggles = getTogglesFromDialog(dialogView)
 
-    private fun toggleSelecao(habit: HabitUI) {
-        habitsAdapter.toggleSelecao(habit)
-        if (habitsAdapter.getSelecionados().isEmpty() && modoExclusaoAtivo) {
-            desativarModoExclusao()
+        title.text = "Editar Hábito"
+        btnSalvar.text = "Salvar"
+        etHabitName.setText(habit.name)
+
+        // ✅ Marca automaticamente os dias já salvos
+        habit.daysOfWeek.forEach { day ->
+            toggles[day]?.isChecked = true
         }
-    }
 
-    private fun confirmarExclusao(habitosParaApagar: List<HabitUI>) {
-        AlertDialog.Builder(this)
-            .setTitle("Excluir Hábitos")
-            .setMessage("Tem certeza que deseja apagar ${habitosParaApagar.size} hábito(s)?")
-            .setPositiveButton("Excluir") { _, _ ->
-                viewModel.executarExclusao(habitosParaApagar)
-                desativarModoExclusao()
+        btnSalvar.setOnClickListener {
+            val novoNome = etHabitName.text.toString().trim()
+            if (novoNome.isEmpty()) {
+                Toast.makeText(this, "O nome não pode ser vazio.", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
             }
-            .setNegativeButton("Cancelar", null)
-            .show()
+
+            val novosDias = toggles.filter { it.value.isChecked }.keys
+            val diasParaSalvar = if (novosDias.isEmpty()) allDays else novosDias
+
+            viewModel.updateHabit(habit.id, novoNome, diasParaSalvar)
+            dialog.dismiss()
+        }
+
+        dialogView.findViewById<Button>(R.id.btn_cancelar_habito)
+            .setOnClickListener { dialog.dismiss() }
+        dialog.show()
     }
 
     private fun mostrarOpcoesHabito(habit: HabitUI) {
@@ -251,50 +255,54 @@ class HabitosActivity : AppCompatActivity() {
             mostrarDialogoEditarHabito(habit)
             dialog.dismiss()
         }
+
         dialog.show()
     }
 
-    private fun mostrarDialogoEditarHabito(habit: HabitUI) {
-        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_novo_habito, null)
-        val dialog = AlertDialog.Builder(this, R.style.Theme_HAM_Dialog_Transparent).setView(dialogView).create()
+    private fun ativarModoExclusao(habit: HabitUI) {
+        modoExclusaoAtivo = true
+        habitsAdapter.setModoExclusao(true)
+        binding.fabAddHabit.visibility = View.GONE
+        binding.btnDeleteSelected.visibility = View.VISIBLE
+        binding.clickOutsideView.visibility = View.VISIBLE
+        toggleSelecao(habit)
+    }
 
-        val title = dialogView.findViewById<TextView>(R.id.dialog_title)
-        val etHabitName = dialogView.findViewById<EditText>(R.id.et_habit_name)
-        val btnSalvar = dialogView.findViewById<Button>(R.id.btn_adicionar_habito)
-        val toggles = getTogglesFromDialog(dialogView)
+    private fun desativarModoExclusao() {
+        modoExclusaoAtivo = false
+        habitsAdapter.setModoExclusao(false)
+        habitsAdapter.limparSelecao()
+        binding.fabAddHabit.visibility = View.VISIBLE
+        binding.btnDeleteSelected.visibility = View.GONE
+        binding.clickOutsideView.visibility = View.GONE
+    }
 
-        title.text = "Editar Hábito"
-        btnSalvar.text = "Salvar"
-        etHabitName.setText(habit.name)
+    private fun toggleSelecao(habit: HabitUI) {
+        habitsAdapter.toggleSelecao(habit)
+        if (habitsAdapter.getSelecionados().isEmpty() && modoExclusaoAtivo) desativarModoExclusao()
+    }
 
-        btnSalvar.setOnClickListener {
-            val novoNome = etHabitName.text.toString().trim()
-            if (novoNome.isEmpty()) {
-                Toast.makeText(this, "O nome não pode ser vazio.", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
+    private fun confirmarExclusao(habitosParaApagar: List<HabitUI>) {
+        AlertDialog.Builder(this)
+            .setTitle("Excluir Hábitos")
+            .setMessage("Tem certeza que deseja apagar ${habitosParaApagar.size} hábito(s)?")
+            .setPositiveButton("Excluir") { _, _ ->
+                viewModel.executarExclusao(habitosParaApagar)
+                desativarModoExclusao()
             }
-            val novosDias = toggles.filter { it.value.isChecked }.keys
-            val diasParaSalvar = if (novosDias.isEmpty()) allDays else novosDias
-
-            viewModel.updateHabit(habit.id, novoNome, diasParaSalvar)
-            dialog.dismiss()
-        }
-
-        dialogView.findViewById<Button>(R.id.btn_cancelar_habito).setOnClickListener { dialog.dismiss() }
-        dialog.show()
+            .setNegativeButton("Cancelar", null)
+            .show()
     }
 
-    private fun getTogglesFromDialog(dialogView: View): Map<String, ToggleButton> {
-        return mapOf(
-            "SUN" to dialogView.findViewById(R.id.toggle_dom),
-            "MON" to dialogView.findViewById(R.id.toggle_seg),
-            "TUE" to dialogView.findViewById(R.id.toggle_ter),
-            "WED" to dialogView.findViewById(R.id.toggle_qua),
-            "THU" to dialogView.findViewById(R.id.toggle_qui),
-            "FRI" to dialogView.findViewById(R.id.toggle_sex),
-            "SAT" to dialogView.findViewById(R.id.toggle_sab)
-        )
-    }
+    private fun getTogglesFromDialog(dialogView: View): Map<String, ToggleButton> = mapOf(
+        "SUN" to dialogView.findViewById(R.id.toggle_dom),
+        "MON" to dialogView.findViewById(R.id.toggle_seg),
+        "TUE" to dialogView.findViewById(R.id.toggle_ter),
+        "WED" to dialogView.findViewById(R.id.toggle_qua),
+        "THU" to dialogView.findViewById(R.id.toggle_qui),
+        "FRI" to dialogView.findViewById(R.id.toggle_sex),
+        "SAT" to dialogView.findViewById(R.id.toggle_sab)
+    )
 
     fun extrairEmoji(texto: String): String = Regex("^\\p{So}").find(texto)?.value ?: ""
     fun removerEmoji(texto: String): String = texto.replaceFirst(Regex("^\\p{So}\\s*"), "")
@@ -302,18 +310,20 @@ class HabitosActivity : AppCompatActivity() {
     fun TextDrawable(context: Context, text: String): Drawable {
         return object : Drawable() {
             private val paint = Paint().apply {
-                color = Color.WHITE
+                color = Color.WHITE // ✅ Ícone/texto branco
                 textSize = 64f
                 isAntiAlias = true
                 textAlign = Paint.Align.CENTER
                 typeface = Typeface.DEFAULT_BOLD
             }
+
             override fun draw(canvas: Canvas) {
                 val bounds = bounds
                 val x = bounds.centerX().toFloat()
                 val y = bounds.centerY() - (paint.descent() + paint.ascent()) / 2
                 canvas.drawText(text, x, y, paint)
             }
+
             override fun setAlpha(alpha: Int) { paint.alpha = alpha }
             override fun getOpacity(): Int = PixelFormat.TRANSLUCENT
             override fun setColorFilter(colorFilter: ColorFilter?) { paint.colorFilter = colorFilter }

@@ -134,6 +134,27 @@ class SuggestionsViewModel(application: Application) : AndroidViewModel(applicat
             }
     }
 
+    // --- FUNÇÃO ADICIONADA ---
+    // Esta é a nova função que permite desmarcar uma sugestão
+    fun markSuggestionAsNotDone(suggestionTitle: String) {
+        val user = auth.currentUser ?: return
+        val hoje = SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(Date())
+        val docRef = firestore.collection("usuarios").document(user.uid)
+            .collection("estadoSugestoes").document(hoje)
+
+        // Usa arrayRemove para tirar o item da lista de "concluidas"
+        docRef.update("concluidas", FieldValue.arrayRemove(suggestionTitle))
+            .addOnSuccessListener {
+                // Recarrega as sugestões para a UI refletir a mudança
+                buscarSugestoesDaIA()
+            }
+            .addOnFailureListener { e ->
+                _statusMessage.postValue(Event("Erro ao desmarcar sugestão."))
+                Log.e("SuggestionsViewModel", "Erro ao remover do array 'concluidas'", e)
+            }
+    }
+    // --- FIM DA FUNÇÃO ADICIONADA ---
+
     fun updateVisibleSuggestions(newInterests: List<String>) {
         val user = auth.currentUser ?: return
         viewModelScope.launch {
