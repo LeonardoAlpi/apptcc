@@ -31,7 +31,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun verificarSessaoAtiva() {
         if (viewModel.getCurrentUser() != null && viewModel.getCurrentUser()!!.isEmailVerified) {
-            Log.d(TAG, "Sessão ativa encontrada. Iniciando sincronização...")
+
             binding.root.visibility = View.INVISIBLE
 
             // MUDANÇA: Agendamos a tarefa diária aqui
@@ -39,7 +39,7 @@ class MainActivity : AppCompatActivity() {
 
             iniciarSincronizacaoENavegacao()
         } else {
-            Log.d(TAG, "Nenhuma sessão ativa. Exibindo tela de login.")
+
             binding.root.visibility = View.VISIBLE
         }
     }
@@ -57,7 +57,7 @@ class MainActivity : AppCompatActivity() {
             binding.progressBar.visibility = View.VISIBLE
 
             viewModel.login(email, senha) {
-                Log.d(TAG, "Login bem-sucedido. Iniciando sincronização...")
+
                 // MUDANÇA: Agendamos a tarefa diária aqui também, após um novo login
                 scheduleDailySuggestionUpdate()
                 iniciarSincronizacaoENavegacao()
@@ -76,7 +76,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun iniciarSincronizacaoENavegacao() {
         viewModel.syncUserProfileOnLogin {
-            Log.d(TAG, "Sincronização completa. Navegando para o Roteador.")
+
             val intent = Intent(this, RoteadorActivity::class.java)
             intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
             startActivity(intent)
@@ -113,6 +113,6 @@ class MainActivity : AppCompatActivity() {
             repeatingRequest
         )
 
-        Log.d(TAG, "Tarefa diária de atualização de sugestões foi agendada/verificada.")
+
     }
 }
