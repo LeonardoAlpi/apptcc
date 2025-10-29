@@ -37,7 +37,7 @@ interface TreinoDao {
 
     // --- Notas de Treino ---
     @Insert
-    suspend fun insertTreinoNota(nota: TreinoNota)
+    suspend fun insertTreinoNota(nota: TreinoNota):Long
 
     @Update
     suspend fun updateTreinoNota(nota: TreinoNota)
@@ -51,4 +51,6 @@ interface TreinoDao {
     // **CONSULTA CORRIGIDA AQUI**
     @Query("SELECT * FROM treino_notas WHERE divisaoId = :divisaoId AND userOwnerId = :userId")
     suspend fun getNotasByDivisaoId(divisaoId: Long, userId: String): List<TreinoNota>
+
+
 }
