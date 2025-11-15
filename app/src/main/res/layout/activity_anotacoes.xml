@@ -133,19 +133,23 @@
             android:layout_height="match_parent"
             android:clipToPadding="false"
             android:paddingBottom="80dp"
+
             android:paddingTop="8dp" />
     </FrameLayout>
 
-    <ImageButton
+    <com.google.android.material.button.MaterialButton
         android:id="@+id/button_toggle_mode"
-        android:layout_width="40dp"
-        android:layout_height="40dp"
-        android:layout_marginBottom="16dp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
         android:layout_marginEnd="24dp"
-        android:background="@drawable/circle_button_bg"
-        android:src="@drawable/ic_switch"
-        app:tint="#DDFFFFFF"
+        android:layout_marginBottom="16dp"
         android:contentDescription="Alternar modo"
+        android:text="Blocos"
+        android:textColor="#FFFFFF"
+        android:background="@drawable/rounded_semi_transparent"
+        app:backgroundTint="@null"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
         app:layout_constraintBottom_toTopOf="@id/navigation_bar"
         app:layout_constraintEnd_toEndOf="parent" />
 

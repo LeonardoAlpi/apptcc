@@ -110,7 +110,7 @@ class WorkoutGenerator {
                 } else { // Nível: Avançado
                     // Nível: Avançado, Tempo: < 30 min (Manter o HIIT original)
                     val treino = TreinoEntity(
-                        userOwnerId = userId, nome = "Casa: HIIT (Avançado)",
+                        userOwnerId = userId, nome = "Casa: HIIT ",
                         iconeResId = iconeCasa, tipoDeTreino = TipoTreino.ACADEMIA,
                         detalhes = "Foco: Intensidade. 20 min.",
                         tipoDivisao = TipoDivisao.LETRAS
@@ -164,7 +164,7 @@ class WorkoutGenerator {
                 } else { // Nível: Avançado
                     // Nível: Avançado, Tempo: 30-60 min
                     val treino = TreinoEntity(
-                        userOwnerId = userId, nome = "Casa: Calistenia (Avançado)",
+                        userOwnerId = userId, nome = "Casa: Calistenia ",
                         iconeResId = iconeCalistenia, tipoDeTreino = TipoTreino.ACADEMIA,
                         detalhes = "Foco: Força Pura. 45 min.",
                         tipoDivisao = TipoDivisao.LETRAS
@@ -223,7 +223,7 @@ class WorkoutGenerator {
                 } else { // Nível: Avançado
                     // Nível: Avançado, Tempo: > 60 min
                     val treino = TreinoEntity(
-                        userOwnerId = userId, nome = "Casa: Força + HIIT (Avançado)",
+                        userOwnerId = userId, nome = "Casa: Força + HIIT ",
                         iconeResId = iconeCalistenia, tipoDeTreino = TipoTreino.ACADEMIA,
                         detalhes = "Foco: $foco. 60+ min.",
                         tipoDivisao = TipoDivisao.LETRAS

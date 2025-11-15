@@ -11,7 +11,7 @@ import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
-import com.apol.myapplication.DivisaoAdapter // <-- IMPORT ADICIONADO AQUI
+import com.apol.myapplication.DivisaoAdapter
 import com.example.meuappfirebase.R
 import com.apol.myapplication.data.model.DivisaoTreino
 import com.apol.myapplication.data.model.TipoDivisao

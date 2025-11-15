@@ -78,11 +78,20 @@ class HabitosActivity : AppCompatActivity() {
                 habitsAdapter.submitList(listaHabitos)
             }
         }
+
         lifecycleScope.launch {
             viewModel.mostrandoHabitosBons.collect { isBons ->
-                binding.habitsTitle.text = if (isBons) "Bons Hábitos" else "Hábitos a Mudar"
+                if (isBons) {
+                    binding.habitsTitle.text = "Bons Hábitos"
+                    binding.buttonToggleMode.text = "Ruim" // Quando em "Bons", o botão mostra "Ruim"
+                } else {
+                    binding.habitsTitle.text = "Hábitos a Mudar"
+                    // --- MUDANÇA AQUI ---
+                    binding.buttonToggleMode.text = "Bom" // Quando em "Mudar", o botão mostra "Bom" (singular)
+                }
             }
         }
+
         lifecycleScope.launch {
             viewModel.operationStatus.collect { message ->
                 message?.let {

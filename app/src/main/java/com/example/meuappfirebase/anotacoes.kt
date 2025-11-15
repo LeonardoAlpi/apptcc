@@ -123,6 +123,9 @@ class anotacoes : AppCompatActivity() {
             binding.editNote.setOnClickListener { mostrarDialogoCriarBloco() }
             binding.buttonAddNote.setOnClickListener { mostrarDialogoCriarBloco() }
             binding.recyclerViewNotes.adapter = blocosAdapter
+
+            binding.buttonToggleMode.text = "Anotações"
+
         } else {
             binding.textView26.text = "Minhas Anotações"
             binding.iconHeader.setImageResource(R.drawable.ic_notes)
@@ -138,6 +141,8 @@ class anotacoes : AppCompatActivity() {
                 }
             }
             binding.recyclerViewNotes.adapter = notesAdapter
+
+            binding.buttonToggleMode.text = "Blocos"
         }
         desativarModoExclusao()
         desativarModoExclusaoBlocos()
