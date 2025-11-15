@@ -1,6 +1,5 @@
 package com.example.meuappfirebase
 
-import android.app.ActivityOptions // << IMPORT ADICIONADO
 import android.content.Intent
 import android.os.Bundle
 import android.widget.RadioButton
@@ -21,15 +20,22 @@ class livro : AppCompatActivity() {
         binding = ActivityLivroBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        configurarBotaoVoltar()
         configurarBotaoAvancar()
         observarEstado()
+    }
+
+    private fun configurarBotaoVoltar() {
+        binding.buttonVoltarlivro.setOnClickListener {
+            finish() // Simplesmente fecha a tela atual
+        }
     }
 
     private fun configurarBotaoAvancar() {
         binding.buttonavancarlivro.setOnClickListener {
             val temHabitoLeitura = when (binding.radioGroup02.checkedRadioButtonId) {
                 binding.radioButtonsimler.id -> true
-                binding.radioButton2nOler.id -> false
+                binding.radioButton2nOler.id -> false // Assumindo que o ID é radioButton2nOler
                 else -> null
             }
             val segueDieta = when (binding.RadioGroup1.checkedRadioButtonId) {
@@ -39,7 +45,7 @@ class livro : AppCompatActivity() {
             }
             val gostariaSeguirDieta = when (binding.radioGroup3.checkedRadioButtonId) {
                 binding.radioButton5simseguir.id -> true
-                binding.radioButton6nOseguir.id -> false
+                binding.radioButton6nOseguir.id -> false // Assumindo que o ID é radioButton6nOseguir
                 else -> null
             }
 
@@ -56,21 +62,15 @@ class livro : AppCompatActivity() {
         lifecycleScope.launch {
             viewModel.onboardingStepUpdated.collect { success ->
                 if (success) {
-                    val intent = Intent(this@livro, RoteadorActivity::class.java)
+                    viewModel.resetOnboardingStepUpdated()
 
                     // --- INÍCIO DA MUDANÇA ---
-                    // 1. Cria o pacote de opções com as animações
-                    val options = ActivityOptions.makeCustomAnimation(
-                        this@livro,
-                        R.anim.fade_in,
-                        R.anim.fade_out
-                    )
-
-                    // 2. Inicia a activity passando as opções de animação
-                    startActivity(intent, options.toBundle())
+                    // O Roteador nos disse que a tela do Step 3 é a 'saudemental'.
+                    // Vamos navegar diretamente para ela, em vez de chamar o Roteador.
+                    val intent = Intent(this@livro, saudemental::class.java)
+                    startActivity(intent)
+                    // NÃO chamamos finish()
                     // --- FIM DA MUDANÇA ---
-
-                    finishAfterTransition()
                 }
             }
         }

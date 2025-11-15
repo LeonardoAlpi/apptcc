@@ -15,7 +15,6 @@
         android:orientation="vertical"
         android:paddingVertical="32dp">
 
-        <!-- Card de hábitos -->
         <LinearLayout
             android:id="@+id/card_habitos"
             android:layout_width="match_parent"
@@ -79,7 +78,6 @@
                 android:textColor="@color/white" />
         </LinearLayout>
 
-        <!-- Card de problemas emocionais -->
         <LinearLayout
             android:id="@+id/card_emocional"
             android:layout_width="match_parent"
@@ -136,16 +134,32 @@
                 android:textColor="@color/white" />
         </LinearLayout>
 
-        <!-- Botão Avançar -->
-        <Button
-            android:id="@+id/buttonavancarsaudemental"
+        <LinearLayout
+            android:id="@+id/layout_botoes"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Avançar"
-            android:padding="12dp"
+            android:orientation="horizontal"
             android:layout_marginTop="32dp"
             android:layout_marginStart="32dp"
             android:layout_marginEnd="32dp"
-            android:layout_marginBottom="32dp"/>
+            android:layout_marginBottom="32dp"> <Button
+            android:id="@+id/buttonVoltarsaudemental"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Voltar"
+            android:padding="12dp"
+            android:layout_marginEnd="8dp" />
+
+            <Button
+                android:id="@+id/buttonavancarsaudemental"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Avançar"
+                android:padding="12dp"
+                android:layout_marginStart="8dp" />
+
+        </LinearLayout>
     </LinearLayout>
 </ScrollView>
