@@ -167,18 +167,31 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    // --- INÍCIO DA MUDANÇA (ETAPA 3) ---
     fun salvarDadosEtapa3(habitos: List<String>, problemas: List<String>) {
         viewModelScope.launch {
             try {
                 val user = getCurrentUserFromRoom()
                 user?.let {
+                    // 1. Atualiza os dados no objeto User
                     it.habitosNegativos = habitos
                     it.problemasEmocionais = problemas
                     it.onboardingStep = 4
-                    updateUser(it)
+                    updateUser(it) // 2. Salva o objeto User (isso sobrescreve, está CORRETO)
 
-                    createHabitsFromQuestionnaire(habitos) {
+                    val userId = it.userId
+                    if (userId == null) {
                         _onboardingStepUpdated.value = true
+                        return@launch
+                    }
+
+                    // 3. Deleta os hábitos antigos criados pelo questionário
+                    deleteQuestionnaireHabits(userId) {
+                        // 4. Somente após deletar, cria os novos hábitos
+                        createHabitsFromQuestionnaire(habitos) {
+                            // 5. Sinaliza que a etapa terminou
+                            _onboardingStepUpdated.value = true
+                        }
                     }
                 }
             } catch (e: Exception) {
@@ -186,118 +199,59 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
     }
+    // --- FIM DA MUDANÇA (ETAPA 3) ---
 
+    // --- INÍCIO DA MUDANÇA (ETAPA 4) ---
     fun salvarDadosEtapa4(pratica: String, tempo: String, espacos: List<String>) {
         viewModelScope.launch {
             try {
                 val user = getCurrentUserFromRoom()
                 user?.let {
+                    // 1. Atualiza os dados no objeto User
                     it.praticaAtividade = pratica
                     it.tempoDisponivel = tempo
                     it.espacosDisponiveis = espacos
                     it.onboardingStep = 5
 
-                    updateUser(it) // Salva os dados da Etapa 4
+                    updateUser(it) // 2. Salva o objeto User (sobrescreve, CORRETO)
 
-                    if (it.userId != null) {
+                    val userId = it.userId
+                    if (userId == null) {
+                        Log.e("WorkoutGenerator", "FALHA: UserID nulo.")
+                        _onboardingStepUpdated.value = true // Ainda avança
+                        return@launch
+                    }
 
-                        // 2. Calcular o IMC
-                        val peso = it.peso ?: 0f
-                        val altura = it.altura ?: 0f
-                        val imc = if (altura > 0) peso / (altura * altura) else 0f
-
-                        // 3. Obter dados com valores padrão
-                        val pratica = it.praticaAtividade ?: "Não"
-                        val tempo = it.tempoDisponivel ?: "Menos de 30 minutos"
-                        val espacos = it.espacosDisponiveis ?: listOf("Casa")
-                        val userId = it.userId!! // Garantido pelo 'if'
-
-                        // 4. Instanciar e chamar o Gerador
-                        val generator = WorkoutGenerator()
-                        val treinosCompletos = generator.gerarTreinos(
-                            pratica = pratica,
-                            tempo = tempo,
-                            espacos = espacos,
-                            imc = imc,
-                            userId = userId
-                        )
-
-                        // 5. Salvar a estrutura completa no Room E no Firestore
-                        val treinoDao = appDb.treinoDao()
-                        val batch = firestore.batch() // (NOVO) Batch para o Firestore
-
-                        Log.d("WorkoutGeneratorSync", "Iniciando batch de sincronização para Firestore...")
-
-                        treinosCompletos.forEach { generatedWorkout ->
-
-                            // --- 5.1 SALVAR TREINO ---
-                            // Room: Salva e obtém o ID
-                            val treinoParaSalvarRoom = generatedWorkout.treino.copy(userOwnerId = userId)
-                            val novoTreinoId = treinoDao.insertTreino(treinoParaSalvarRoom)
-
-                            // Firestore: Prepara o batch com o ID do Room
-                            val treinoParaSalvarFirestore = treinoParaSalvarRoom.copy(id = novoTreinoId)
-                            val treinoDocRef = firestore.collection("treinos").document(novoTreinoId.toString())
-                            batch.set(treinoDocRef, treinoParaSalvarFirestore)
-
-                            generatedWorkout.divisoes.forEach { generatedDivision ->
-
-                                // --- 5.2 SALVAR DIVISÃO ---
-                                // Room: Prepara, salva e obtém o ID
-                                val divisaoParaSalvarRoom = generatedDivision.divisao.copy(
-                                    treinoId = novoTreinoId,
-                                    userOwnerId = userId
-                                )
-                                val novaDivisaoId = treinoDao.insertDivisao(divisaoParaSalvarRoom)
-
-                                // Firestore: Prepara o batch com o ID do Room
-                                val divisaoParaSalvarFirestore = divisaoParaSalvarRoom.copy(id = novaDivisaoId)
-                                val divisaoDocRef = firestore.collection("divisoes_treino").document(novaDivisaoId.toString())
-                                batch.set(divisaoDocRef, divisaoParaSalvarFirestore)
-
-                                generatedDivision.notas.forEach { nota ->
-
-                                    // --- 5.3 SALVAR NOTA ---
-                                    // Room: Prepara, salva e obtém o ID (graças à mudança no DAO)
-                                    val notaParaSalvarRoom = nota.copy(
-                                        divisaoId = novaDivisaoId,
-                                        userOwnerId = userId
-                                    )
-                                    val novaNotaId = treinoDao.insertTreinoNota(notaParaSalvarRoom)
-
-                                    // Firestore: Prepara o batch com o ID do Room
-                                    val notaParaSalvarFirestore = notaParaSalvarRoom.copy(id = novaNotaId)
-                                    val notaDocRef = firestore.collection("treino_notas").document(novaNotaId.toString())
-                                    batch.set(notaDocRef, notaParaSalvarFirestore)
+                    // 3. VERIFICA se os treinos já foram gerados
+                    firestore.collection("treinos")
+                        .whereEqualTo("userOwnerId", userId)
+                        .limit(1) // Só precisamos saber se existe pelo menos 1
+                        .get()
+                        .addOnSuccessListener { snapshot ->
+                            if (snapshot.isEmpty) {
+                                // 4A. NÃO TEM TREINOS: Roda o gerador pela primeira vez
+                                Log.d("WorkoutGenerator", "Nenhum treino encontrado. Gerando...")
+                                viewModelScope.launch {
+                                    gerarTreinos(it) // Chama a nova função extraída
+                                    _onboardingStepUpdated.value = true // Avança após gerar
                                 }
+                            } else {
+                                // 4B. JÁ TEM TREINOS: Pula a geração
+                                Log.d("WorkoutGenerator", "Treinos já existem. Geração pulada.")
+                                _onboardingStepUpdated.value = true // Avança direto
                             }
                         }
-
-                        // (NOVO) 5.6. Executa todo o salvamento no Firestore de uma vez
-                        batch.commit()
-                            .addOnSuccessListener {
-                                Log.d("WorkoutGeneratorSync", "SUCESSO: Batch de treinos gerados salvo no Firestore.")
-                            }
-                            .addOnFailureListener { e ->
-                                Log.e("WorkoutGeneratorSync", "FALHA: Erro ao salvar batch de treinos no Firestore.", e)
-                                // Os dados ainda estão salvos localmente (Room)
-                                _uiState.value = AuthUiState(error = "Treinos salvos localmente, mas falha ao sincronizar: ${e.message}")
-                            }
-
-                        Log.d("WorkoutGenerator", "SUCESSO: ${treinosCompletos.size} treinos completos salvos no Room.")
-
-                    } else {
-                        Log.e("WorkoutGenerator", "FALHA: UserID nulo. Nenhum treino foi gerado.")
-                    }
-                    // --- FIM DA GERAÇÃO DE TREINO (V2.1 - COM SYNC FIREBASE) ---
-
-                    _onboardingStepUpdated.value = true
+                        .addOnFailureListener { e ->
+                            Log.e("WorkoutGenerator", "Falha ao checar treinos. Pulando.", e)
+                            _onboardingStepUpdated.value = true // Avança mesmo com falha
+                        }
                 }
             } catch (e: Exception) {
                 _uiState.value = AuthUiState(error = "Erro ao salvar: ${e.message}")
             }
         }
     }
+    // --- FIM DA MUDANÇA (ETAPA 4) ---
 
     fun salvarDadosEtapa5(interesses: List<String>) {
         viewModelScope.launch {
@@ -330,6 +284,45 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    // --- INÍCIO DA NOVA FUNÇÃO (ETAPA 3) ---
+    /**
+     * Deleta todos os hábitos do questionário (isGoodHabit == false)
+     * antes de criar os novos, para evitar duplicatas.
+     */
+    private fun deleteQuestionnaireHabits(userId: String, onSuccess: () -> Unit) {
+        firestore.collection("habitos")
+            .whereEqualTo("userOwnerId", userId)
+            .whereEqualTo("isGoodHabit", false) // Deleta APENAS os hábitos ruins gerados aqui
+            .get()
+            .addOnSuccessListener { snapshot ->
+                if (snapshot.isEmpty) {
+                    Log.d("DeleteHabits", "Nenhum hábito antigo para deletar.")
+                    onSuccess() // Nada para deletar, continua
+                    return@addOnSuccessListener
+                }
+
+                val batch = firestore.batch()
+                snapshot.documents.forEach { doc ->
+                    batch.delete(doc.reference) // Adiciona a exclusão ao batch
+                }
+
+                batch.commit()
+                    .addOnSuccessListener {
+                        Log.d("DeleteHabits", "${snapshot.size()} hábitos antigos deletados.")
+                        onSuccess() // Continua após deletar
+                    }
+                    .addOnFailureListener { e ->
+                        Log.e("DeleteHabits", "Falha ao deletar hábitos antigos.", e)
+                        onSuccess() // Continua mesmo com falha para não travar o usuário
+                    }
+            }
+            .addOnFailureListener { e ->
+                Log.e("DeleteHabits", "Falha ao buscar hábitos antigos.", e)
+                onSuccess() // Continua mesmo com falha para não travar o usuário
+            }
+    }
+    // --- FIM DA NOVA FUNÇÃO (ETAPA 3) ---
+
     private fun createHabitsFromQuestionnaire(habitosParaMudar: List<String>, onSuccess: () -> Unit) {
         val user = auth.currentUser ?: return
         viewModelScope.launch {
@@ -357,9 +350,85 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                 }
                 .addOnFailureListener { e ->
                     _uiState.value = AuthUiState(isLoading = false, error = "Erro ao criar hábitos: ${e.message}")
+                    onSuccess() // Continua mesmo com falha
                 }
         }
     }
+
+    // --- INÍCIO DA NOVA FUNÇÃO (ETAPA 4) ---
+    /**
+     * Lógica de geração de treino, extraída da Etapa 4 para ser
+     * chamada condicionalmente, evitando duplicatas.
+     */
+    private suspend fun gerarTreinos(user: User) {
+        try {
+            val peso = user.peso ?: 0f
+            val altura = user.altura ?: 0f
+            val imc = if (altura > 0) peso / (altura * altura) else 0f
+            val pratica = user.praticaAtividade ?: "Não"
+            val tempo = user.tempoDisponivel ?: "Menos de 30 minutos"
+            val espacos = user.espacosDisponiveis ?: listOf("Casa")
+            val userId = user.userId!! // Já foi checado na Etapa 4
+
+            val generator = WorkoutGenerator()
+            val treinosCompletos = generator.gerarTreinos(
+                pratica = pratica,
+                tempo = tempo,
+                espacos = espacos,
+                imc = imc,
+                userId = userId
+            )
+
+            val treinoDao = appDb.treinoDao()
+            val batch = firestore.batch()
+            Log.d("WorkoutGeneratorSync", "Iniciando batch de sincronização para Firestore...")
+
+            treinosCompletos.forEach { generatedWorkout ->
+                val treinoParaSalvarRoom = generatedWorkout.treino.copy(userOwnerId = userId)
+                val novoTreinoId = treinoDao.insertTreino(treinoParaSalvarRoom)
+                val treinoParaSalvarFirestore = treinoParaSalvarRoom.copy(id = novoTreinoId)
+                val treinoDocRef = firestore.collection("treinos").document(novoTreinoId.toString())
+                batch.set(treinoDocRef, treinoParaSalvarFirestore)
+
+                generatedWorkout.divisoes.forEach { generatedDivision ->
+                    val divisaoParaSalvarRoom = generatedDivision.divisao.copy(
+                        treinoId = novoTreinoId,
+                        userOwnerId = userId
+                    )
+                    val novaDivisaoId = treinoDao.insertDivisao(divisaoParaSalvarRoom)
+                    val divisaoParaSalvarFirestore = divisaoParaSalvarRoom.copy(id = novaDivisaoId)
+                    val divisaoDocRef = firestore.collection("divisoes_treino").document(novaDivisaoId.toString())
+                    batch.set(divisaoDocRef, divisaoParaSalvarFirestore)
+
+                    generatedDivision.notas.forEach { nota ->
+                        val notaParaSalvarRoom = nota.copy(
+                            divisaoId = novaDivisaoId,
+                            userOwnerId = userId
+                        )
+                        val novaNotaId = treinoDao.insertTreinoNota(notaParaSalvarRoom)
+                        val notaParaSalvarFirestore = notaParaSalvarRoom.copy(id = novaNotaId)
+                        val notaDocRef = firestore.collection("treino_notas").document(novaNotaId.toString())
+                        batch.set(notaDocRef, notaParaSalvarFirestore)
+                    }
+                }
+            }
+
+            batch.commit()
+                .addOnSuccessListener {
+                    Log.d("WorkoutGeneratorSync", "SUCESSO: Batch de treinos gerados salvo no Firestore.")
+                }
+                .addOnFailureListener { e ->
+                    Log.e("WorkoutGeneratorSync", "FALHA: Erro ao salvar batch de treinos no Firestore.", e)
+                    _uiState.value = AuthUiState(error = "Treinos salvos localmente, mas falha ao sincronizar: ${e.message}")
+                }
+
+            Log.d("WorkoutGenerator", "SUCESSO: ${treinosCompletos.size} treinos completos salvos no Room.")
+        } catch (e: Exception) {
+            Log.e("WorkoutGenerator", "Erro catastrófico ao gerar treinos.", e)
+            _uiState.value = AuthUiState(error = "Erro ao gerar treinos: ${e.message}")
+        }
+    }
+    // --- FIM DA NOVA FUNÇÃO (ETAPA 4) ---
 
     fun resetOnboardingStepUpdated() {
         _onboardingStepUpdated.value = false
