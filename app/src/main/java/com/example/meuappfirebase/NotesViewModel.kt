@@ -22,13 +22,15 @@ import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import java.util.*
+import com.apol.myapplication.BlocoScheduler
 
 class NotesViewModel(application: Application) : AndroidViewModel(application) {
 
     private val auth = Firebase.auth
     private val firestore = Firebase.firestore
     private val notesDao = AppDatabase.getDatabase(application).notesDao()
-    private val alarmManager = application.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+
+    //private val alarmManager = application.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
     private val _notes = MutableLiveData<List<Note>>()
     val notes: LiveData<List<Note>> = _notes
@@ -49,20 +51,23 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
             notesDao.getNotesByUser(user.uid).collect { _notes.postValue(it) }
         }
 
-        // Listener em tempo real para os blocos direto do Firestore
         firestore.collection("usuarios").document(user.uid).collection("blocos")
             .addSnapshotListener { snapshots, error ->
-                if (error != null) {
-                    _statusMessage.postValue(Event("Erro ao carregar blocos."))
-                    return@addSnapshotListener
-                }
-                // Mapeia os documentos, garantindo que o ID do Firestore seja atribuído
+                // ... (seu código de snapshot listener)
                 val blocosList = snapshots?.documents?.mapNotNull { doc ->
                     doc.toObject(Bloco::class.java)?.copy(id = doc.id)
                 } ?: emptyList()
 
                 _blocos.postValue(blocosList)
-                // Sincroniza a lista com o banco de dados local (Room)
+
+                // --- ADIÇÃO IMPORTANTE ---
+                // Sincroniza TODOS os alarmes quando os dados são carregados
+                val context = getApplication<Application>().applicationContext
+                blocosList.forEach { bloco ->
+                    BlocoScheduler.agendarLembrete(context, bloco)
+                }
+                // --- FIM DA ADIÇÃO ---
+
                 viewModelScope.launch {
                     notesDao.syncBlocos(user.uid, blocosList)
                 }
@@ -102,21 +107,28 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
     fun updateBloco(bloco: Bloco) {
         val user = auth.currentUser ?: return
         firestore.collection("usuarios").document(user.uid).collection("blocos")
-            .document(bloco.id).set(bloco) // .set() também funciona para atualizar/sobrescrever
+            .document(bloco.id).set(bloco)
             .addOnSuccessListener {
-                // O listener em tempo real já vai atualizar o Room.
-                cancelarLembretesParaBloco(bloco)
-                if (bloco.tipoLembrete != TipoLembrete.NENHUM) {
-                    agendarLembretesParaBloco(bloco)
-                }
+                // O listener em tempo real vai atualizar o Room.
+
+                // --- MUDANÇA AQUI ---
+                // Em vez de agendar/cancelar aqui, apenas chama o Scheduler
+                val context = getApplication<Application>().applicationContext
+                BlocoScheduler.agendarLembrete(context, bloco)
+                // --- FIM DA MUDANÇA ---
             }
     }
 
     fun deleteBlocos(blocos: List<Bloco>) {
         val user = auth.currentUser ?: return
+        val context = getApplication<Application>().applicationContext // <-- Pega o contexto
         val batch = firestore.batch()
+
         blocos.forEach { bloco ->
-            cancelarLembretesParaBloco(bloco)
+            // --- MUDANÇA AQUI ---
+            BlocoScheduler.cancelarLembretes(context, bloco) // <-- Usa o Scheduler
+            // --- FIM DA MUDANÇA ---
+
             val docRef = firestore.collection("usuarios").document(user.uid).collection("blocos").document(bloco.id)
             batch.delete(docRef)
         }
@@ -145,7 +157,7 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
 
     // --- LÓGICA DE ALARME E NOTIFICAÇÃO ---
     // (O resto do seu código de alarmes continua aqui, sem alterações)
-    private fun agendarLembretesParaBloco(bloco: Bloco) {
+   /* private fun agendarLembretesParaBloco(bloco: Bloco) {
         val context = getApplication<Application>().applicationContext
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !alarmManager.canScheduleExactAlarms()) {
             _statusMessage.postValue(Event("Permissão para agendar alarmes é necessária."))
@@ -225,5 +237,5 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
         val diaValidoProximoMes = if (dia > maxDayOfNextMonth) maxDayOfNextMonth else dia
         proximoAgendamento.set(Calendar.DAY_OF_MONTH, diaValidoProximoMes)
         return proximoAgendamento
-    }
+    }*/
 }

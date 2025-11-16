@@ -56,4 +56,7 @@ interface NotesDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAllBlocos(blocos: List<Bloco>)
+
+    @Query("SELECT * FROM blocos WHERE id = :blocoId LIMIT 1")
+    suspend fun getBlocoById(blocoId: String): Bloco?
 }
