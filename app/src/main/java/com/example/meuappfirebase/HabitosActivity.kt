@@ -23,6 +23,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.meuappfirebase.databinding.ActivityHabitosBinding
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import com.apol.myapplication.DailyCheckupScheduler
 import java.util.*
 
 class HabitosActivity : AppCompatActivity() {
@@ -57,6 +58,8 @@ class HabitosActivity : AppCompatActivity() {
 
         pedirPermissaoDeNotificacao()
         viewModel.tryToScheduleHabitReminders()
+
+        DailyCheckupScheduler.scheduleNextCheckup(this.applicationContext)
 
         val abrirDialogo = intent.getBooleanExtra("ABRIR_DIALOGO_NOVO_HABITO", false)
         if (abrirDialogo) mostrarDialogoNovoHabito()
