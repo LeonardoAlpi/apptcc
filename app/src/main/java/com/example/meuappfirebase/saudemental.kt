@@ -19,12 +19,26 @@ class saudemental : AppCompatActivity() {
         binding = ActivitySaudementalBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Verificação duplicada em onCreate foi REMOVIDA para centralizar a lógica no Roteador.
+        // --- INÍCIO DA MUDANÇA (1) ---
+        configurarBotaoVoltar() // Adiciona o listener para o botão "Voltar"
+        // --- FIM DA MUDANÇA (1) ---
 
         configurarCheckBoxes()
         configurarBotaoAvancar()
         observarEstado()
     }
+
+    // --- INÍCIO DA MUDANÇA (2) ---
+    // Função inteira adicionada para o novo botão "Voltar"
+    private fun configurarBotaoVoltar() {
+        binding.buttonVoltarsaudemental.setOnClickListener {
+            // Apenas "fecha" esta Activity (saudemental)
+            // O Android automaticamente vai mostrar a que estava embaixo (livro)
+            finish()
+        }
+    }
+    // --- FIM DA MUDANÇA (2) ---
+
 
     private fun configurarCheckBoxes() {
         val listaHabitosChecks = listOf(
@@ -89,21 +103,29 @@ class saudemental : AppCompatActivity() {
                 return@setOnClickListener
             }
 
-            // <-- MUDANÇA PRINCIPAL
-            // Chama a nova função no ViewModel para salvar os dados e ATUALIZAR O PASSO
             viewModel.salvarDadosEtapa3(habitosSelecionados, problemasEmocionaisSelecionados)
         }
     }
 
     private fun observarEstado() {
-        // Observa o sucesso da atualização para navegar de volta ao Roteador
+        // Observa o sucesso da atualização para navegar
         lifecycleScope.launch {
             viewModel.onboardingStepUpdated.collect { success ->
                 if (success) {
-                    // Dados salvos, volta para o Roteador decidir o próximo passo
-                    val intent = Intent(this@saudemental, RoteadorActivity::class.java)
+                    // --- INÍCIO DA MUDANÇA (3) ---
+
+                    // 1. Reseta o gatilho
+                    viewModel.resetOnboardingStepUpdated()
+
+                    // 2. Navega DIRETAMENTE para a próxima tela (Step 4),
+                    //    conforme visto no RoteadorActivity.
+                    val intent = Intent(this@saudemental, pergunta01::class.java)
                     startActivity(intent)
-                    finish()
+
+                    // 3. REMOVEMOS o finish() para corrigir o "piscar"
+                    // finish()
+
+                    // --- FIM DA MUDANÇA (3) ---
                 }
             }
         }

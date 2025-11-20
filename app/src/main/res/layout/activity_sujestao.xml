@@ -240,18 +240,36 @@
                 android:buttonTint="@color/white"/>
         </LinearLayout>
 
-        <Button
-            android:id="@+id/buttonavancarsujestao"
+        <LinearLayout
+            android:id="@+id/layout_botoes"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:text="Avançar"
-            android:padding="12dp"
+            android:orientation="horizontal"
             android:layout_marginTop="32dp"
             android:layout_marginStart="32dp"
             android:layout_marginEnd="32dp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/card_nenhuma" />
+            app:layout_constraintTop_toBottomOf="@id/card_nenhuma">
 
+            <Button
+                android:id="@+id/buttonVoltarsujestao"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Voltar"
+                android:padding="12dp"
+                android:layout_marginEnd="8dp" />
+
+            <Button
+                android:id="@+id/buttonavancarsujestao"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Finalizar"
+                android:padding="12dp"
+                android:layout_marginStart="8dp" />
+
+        </LinearLayout>
     </androidx.constraintlayout.widget.ConstraintLayout>
 </ScrollView>

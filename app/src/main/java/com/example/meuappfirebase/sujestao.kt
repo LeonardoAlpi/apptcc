@@ -12,7 +12,6 @@ import kotlinx.coroutines.launch
 class sujestao : AppCompatActivity() {
 
     private lateinit var binding: ActivitySujestaoBinding
-    // A tela agora só precisa do AuthViewModel para finalizar o onboarding
     private val authViewModel: AuthViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -20,14 +19,16 @@ class sujestao : AppCompatActivity() {
         binding = ActivitySujestaoBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        configurarBotaoVoltar()
         configurarCheckBoxes()
         configurarBotaoAvancar()
         observarEstado()
     }
 
-    override fun onBackPressed() {
-        // Impede o usuário de voltar para uma tela anterior do questionário
-        finishAffinity()
+    private fun configurarBotaoVoltar() {
+        binding.buttonVoltarsujestao.setOnClickListener {
+            finish()
+        }
     }
 
     private fun configurarBotaoAvancar() {
@@ -61,15 +62,25 @@ class sujestao : AppCompatActivity() {
                 if (success) {
                     authViewModel.resetOnboardingStepUpdated()
 
-                    // --- CORREÇÃO APLICADA AQUI ---
-                    // A chamada para 'gerarSugestoesIniciais()' foi REMOVIDA, pois não é mais necessária.
                     Toast.makeText(this@sujestao, "Cadastro finalizado!", Toast.LENGTH_LONG).show()
 
-                    // A navegação para o Roteador continua igual
-                    val intent = Intent(this@sujestao, RoteadorActivity::class.java)
-                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                    // --- INÍCIO DA MUDANÇA (TENTATIVA 3 - A MAIS FORTE) ---
+
+                    // 1. Navega DIRETAMENTE para 'Bemvindouser' (pulando o Roteador)
+                    val intent = Intent(this@sujestao, Bemvindouser::class.java)
+
+                    // 2. REMOVEMOS AS FLAGS. Elas são a causa do "piscar".
+                    // intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                     startActivity(intent)
-                    finish()
+
+                    // 3. Forçamos a transição a ser INSTANTÂNEA (sem animação).
+                    overridePendingTransition(0, 0)
+
+                    // 4. USAMOS finishAffinity(). Isso "limpa a pilha" do quiz
+                    //    DEPOIS que a nova tela já foi iniciada.
+                    finishAffinity()
+
+                    // --- FIM DA MUDANÇA ---
                 }
             }
         }

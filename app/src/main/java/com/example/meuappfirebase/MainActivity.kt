@@ -31,15 +31,10 @@ class MainActivity : AppCompatActivity() {
 
     private fun verificarSessaoAtiva() {
         if (viewModel.getCurrentUser() != null && viewModel.getCurrentUser()!!.isEmailVerified) {
-
             binding.root.visibility = View.INVISIBLE
-
-            // MUDANÇA: Agendamos a tarefa diária aqui
             scheduleDailySuggestionUpdate()
-
             iniciarSincronizacaoENavegacao()
         } else {
-
             binding.root.visibility = View.VISIBLE
         }
     }
@@ -57,8 +52,6 @@ class MainActivity : AppCompatActivity() {
             binding.progressBar.visibility = View.VISIBLE
 
             viewModel.login(email, senha) {
-
-                // MUDANÇA: Agendamos a tarefa diária aqui também, após um novo login
                 scheduleDailySuggestionUpdate()
                 iniciarSincronizacaoENavegacao()
             }
@@ -77,10 +70,23 @@ class MainActivity : AppCompatActivity() {
     private fun iniciarSincronizacaoENavegacao() {
         viewModel.syncUserProfileOnLogin {
 
-            val intent = Intent(this, RoteadorActivity::class.java)
-            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            // --- INÍCIO DA MUDANÇA (TENTATIVA 3 - A MAIS FORTE) ---
+
+            // 1. Navega DIRETAMENTE para 'infousuario' (pulando o Roteador)
+            val intent = Intent(this, infousuario::class.java)
+
+            // 2. REMOVEMOS AS FLAGS. Elas são a causa do "piscar".
+            // intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
             startActivity(intent)
-            finish()
+
+            // 3. Forçamos a transição a ser INSTANTÂNEA (sem animação).
+            overridePendingTransition(0, 0)
+
+            // 4. USAMOS finishAffinity(). Isso "limpa a pilha" de forma suave
+            //    DEPOIS que a nova tela já foi iniciada, matando o "piscar".
+            finishAffinity()
+
+            // --- FIM DA MUDANÇA ---
         }
     }
 
@@ -95,24 +101,17 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // --- FUNÇÃO ADICIONADA PARA AGENDAR A TAREFA DIÁRIA ---
     private fun scheduleDailySuggestionUpdate() {
         val constraints = Constraints.Builder()
-            .setRequiredNetworkType(NetworkType.CONNECTED) // Só roda com internet
+            .setRequiredNetworkType(NetworkType.CONNECTED)
             .build()
-
-        // Configura a tarefa para repetir a cada 24 horas
         val repeatingRequest = PeriodicWorkRequestBuilder<UpdateSuggestionsWorker>(1, TimeUnit.DAYS)
             .setConstraints(constraints)
             .build()
-
-        // Envia a tarefa para o WorkManager, garantindo que não haverá duplicatas
         WorkManager.getInstance(this).enqueueUniquePeriodicWork(
-            "dailySuggestionUpdate", // Nome único da tarefa
-            ExistingPeriodicWorkPolicy.KEEP, // Se já estiver agendada, mantém a antiga.
+            "dailySuggestionUpdate",
+            ExistingPeriodicWorkPolicy.KEEP,
             repeatingRequest
         )
-
-
     }
 }

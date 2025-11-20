@@ -1,7 +1,7 @@
 package com.example.meuappfirebase
 
 // import android.R // << IMPORT REMOVIDO: Evita conflitos com seus recursos
-import android.app.ActivityOptions // << IMPORT ADICIONADO: Necessário para a nova animação
+// import android.app.ActivityOptions // << IMPORT REMOVIDO: Não é mais necessário
 import android.content.Intent
 import android.os.Bundle
 import android.widget.RadioButton
@@ -22,9 +22,24 @@ class pergunta01 : AppCompatActivity() {
         binding = ActivityPergunta01Binding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        // --- INÍCIO DA MUDANÇA (1) ---
+        configurarBotaoVoltar() // Adiciona o listener para o botão "Voltar"
+        // --- FIM DA MUDANÇA (1) ---
+
         configurarBotaoAvancar()
         observarEstado()
     }
+
+    // --- INÍCIO DA MUDANÇA (2) ---
+    // Função inteira adicionada para o novo botão "Voltar"
+    private fun configurarBotaoVoltar() {
+        binding.buttonVoltaratividades.setOnClickListener {
+            // Apenas "fecha" esta Activity (pergunta01)
+            // O Android automaticamente vai mostrar a que estava embaixo (saudemental)
+            finish()
+        }
+    }
+    // --- FIM DA MUDANÇA (2) ---
 
     private fun configurarBotaoAvancar() {
         binding.buttonavancaratividades.setOnClickListener {
@@ -57,22 +72,26 @@ class pergunta01 : AppCompatActivity() {
         lifecycleScope.launch {
             viewModel.onboardingStepUpdated.collect { success ->
                 if (success) {
-                    val intent = Intent(this@pergunta01, RoteadorActivity::class.java)
+                    // --- INÍCIO DA MUDANÇA (3) ---
 
-                    // --- INÍCIO DA MUDANÇA ---
-                    // 1. Cria o pacote de opções com as animações de fade
-                    val options = ActivityOptions.makeCustomAnimation(
-                        this@pergunta01,
-                        R.anim.fade_in, // Animação para a nova tela que entra
-                        R.anim.fade_out  // Animação para a tela antiga que sai
-                    )
+                    // 1. Reseta o gatilho
+                    viewModel.resetOnboardingStepUpdated()
 
-                    // 2. Inicia a nova activity passando o pacote de opções
-                    startActivity(intent, options.toBundle())
-                    // --- FIM DA MUDANÇA ---
+                    // 2. Navega DIRETAMENTE para a próxima tela (Step 5),
+                    //    conforme visto no RoteadorActivity.
+                    val intent = Intent(this@pergunta01, sujestao::class.java)
 
-                    // O overridePendingTransition foi removido daqui
-                    finishAfterTransition()
+                    // 3. Lógica de ActivityOptions REMOVIDA
+                    // val options = ActivityOptions.makeCustomAnimation(...)
+
+                    // 4. Chamada de 'startActivity' SIMPLIFICADA
+                    // startActivity(intent, options.toBundle())
+                    startActivity(intent)
+
+                    // 5. REMOVEMOS o finish() para corrigir o "piscar"
+                    // finishAfterTransition()
+
+                    // --- FIM DA MUDANÇA (3) ---
                 }
             }
         }

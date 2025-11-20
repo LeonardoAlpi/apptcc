@@ -104,7 +104,7 @@ class SugestaoUser : AppCompatActivity() {
                     if (state.isCompleted) {
                         // --- ESTADO CONCLUÍDO ---
                         it.alpha = 0.6f
-                        cardBinding.btnConcluirSugestao.setImageResource(R.drawable.ic_cancel)
+                        cardBinding.btnConcluirSugestao.setImageResource(R.drawable.ic_cancel1)
                         cardBinding.btnConcluirSugestao.imageTintList =
                             ColorStateList.valueOf(ContextCompat.getColor(this, android.R.color.white)) // Ícone branco ✅
 
