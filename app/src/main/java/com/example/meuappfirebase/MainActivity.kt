@@ -70,20 +70,20 @@ class MainActivity : AppCompatActivity() {
     private fun iniciarSincronizacaoENavegacao() {
         viewModel.syncUserProfileOnLogin {
 
-            // --- INÍCIO DA MUDANÇA (TENTATIVA 3 - A MAIS FORTE) ---
+            // --- INÍCIO DA MUDANÇA (CORREÇÃO DE ROTEAMENTO) ---
 
-            // 1. Navega DIRETAMENTE para 'infousuario' (pulando o Roteador)
-            val intent = Intent(this, infousuario::class.java)
+            // 1. A MainActivity DEVE SEMPRE chamar o Roteador.
+            val intent = Intent(this, RoteadorActivity::class.java)
 
-            // 2. REMOVEMOS AS FLAGS. Elas são a causa do "piscar".
-            // intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            // 2. Não usamos 'flags' aqui
             startActivity(intent)
 
-            // 3. Forçamos a transição a ser INSTANTÂNEA (sem animação).
+            // 3. Aplicamos a correção do "piscar" AQUI.
+            //    Isso faz a transição (Login -> Roteador) ser instantânea.
             overridePendingTransition(0, 0)
 
-            // 4. USAMOS finishAffinity(). Isso "limpa a pilha" de forma suave
-            //    DEPOIS que a nova tela já foi iniciada, matando o "piscar".
+            // 4. Usamos finishAffinity() para "limpar a pilha" (matar o Login)
+            //    DEPOIS que o Roteador for iniciado.
             finishAffinity()
 
             // --- FIM DA MUDANÇA ---

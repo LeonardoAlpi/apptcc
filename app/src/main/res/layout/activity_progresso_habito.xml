@@ -60,7 +60,8 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:padding="16dp">
+                android:padding="16dp"
+                android:minHeight="90dp"> <!-- <<< INÍCIO DA MUDANÇA (1) -->
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -91,7 +92,8 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:padding="16dp">
+                android:padding="16dp"
+                android:minHeight="90dp"> <!-- <<< INÍCIO DA MUDANÇA (2) -->
                 <TextView
                     android:id="@+id/tv_constancia_label"
                     android:layout_width="wrap_content"
