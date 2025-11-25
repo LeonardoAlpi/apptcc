@@ -23,6 +23,12 @@
             android:exported="false" />
 
         <receiver
+            android:name="com.apol.myapplication.DailyCheckupReceiver"
+            android:enabled="true"
+            android:exported="false" />
+
+
+        <receiver
             android:name="com.apol.myapplication.BlocoNotificationReceiver"
             android:exported="false" />
 
